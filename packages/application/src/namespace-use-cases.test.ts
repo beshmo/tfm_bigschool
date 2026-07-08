@@ -1,0 +1,120 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  DuplicateNamespaceError,
+  InvalidResourceNameError,
+  Namespace,
+  NamespaceNotFoundError,
+} from '@okvns/domain';
+import { FakeNamespaceRepository } from './testing/fake-namespace-repository.js';
+import {
+  CreateNamespaceUseCase,
+  DeleteNamespaceUseCase,
+  GetNamespaceUseCase,
+  ListNamespacesUseCase,
+  UpdateNamespaceUseCase,
+} from './namespace-use-cases.js';
+
+let repository: FakeNamespaceRepository;
+
+beforeEach(() => {
+  repository = new FakeNamespaceRepository();
+});
+
+describe('CreateNamespaceUseCase', () => {
+  it('GIVEN a valid new name WHEN executed THEN it stores and returns the namespace', async () => {
+    const dto = await new CreateNamespaceUseCase(repository).execute('  users  ');
+    expect(dto).toEqual({ name: 'users', entries: [] });
+    expect(await repository.existsByName('users')).toBe(true);
+  });
+
+  it('GIVEN an invalid name WHEN executed THEN it throws a validation error', async () => {
+    await expect(new CreateNamespaceUseCase(repository).execute('bad name')).rejects.toBeInstanceOf(
+      InvalidResourceNameError,
+    );
+  });
+
+  it('GIVEN an existing name WHEN executed THEN it throws DuplicateNamespaceError', async () => {
+    const useCase = new CreateNamespaceUseCase(repository);
+    await useCase.execute('users');
+    await expect(useCase.execute('users')).rejects.toBeInstanceOf(DuplicateNamespaceError);
+  });
+});
+
+describe('ListNamespacesUseCase', () => {
+  it('GIVEN namespaces WHEN listed THEN they are returned in name order', async () => {
+    await repository.save(Namespace.create('zeta'));
+    await repository.save(Namespace.create('alpha'));
+    const result = await new ListNamespacesUseCase(repository).execute();
+    expect(result.map((n) => n.name)).toEqual(['alpha', 'zeta']);
+  });
+});
+
+describe('GetNamespaceUseCase', () => {
+  it('GIVEN an existing namespace WHEN retrieved THEN it is returned', async () => {
+    await repository.save(Namespace.create('users'));
+    expect(await new GetNamespaceUseCase(repository).execute('users')).toEqual({
+      name: 'users',
+      entries: [],
+    });
+  });
+
+  it('GIVEN a missing namespace WHEN retrieved THEN it throws NamespaceNotFoundError', async () => {
+    await expect(new GetNamespaceUseCase(repository).execute('missing')).rejects.toBeInstanceOf(
+      NamespaceNotFoundError,
+    );
+  });
+});
+
+describe('UpdateNamespaceUseCase', () => {
+  it('GIVEN a valid rename WHEN executed THEN the namespace is re-keyed and entries preserved', async () => {
+    const useCase = new UpdateNamespaceUseCase(repository);
+    const ns = Namespace.create('users');
+    await repository.save(ns);
+    const dto = await useCase.execute('users', 'people');
+    expect(dto.name).toBe('people');
+    expect(await repository.existsByName('users')).toBe(false);
+    expect(await repository.existsByName('people')).toBe(true);
+  });
+
+  it('GIVEN a rename to the same name WHEN executed THEN it succeeds without deleting', async () => {
+    const useCase = new UpdateNamespaceUseCase(repository);
+    await repository.save(Namespace.create('users'));
+    const dto = await useCase.execute('users', 'users');
+    expect(dto.name).toBe('users');
+    expect(await repository.existsByName('users')).toBe(true);
+  });
+
+  it('GIVEN a rename to an existing name WHEN executed THEN it throws DuplicateNamespaceError', async () => {
+    const useCase = new UpdateNamespaceUseCase(repository);
+    await repository.save(Namespace.create('users'));
+    await repository.save(Namespace.create('people'));
+    await expect(useCase.execute('users', 'people')).rejects.toBeInstanceOf(DuplicateNamespaceError);
+  });
+
+  it('GIVEN a missing namespace WHEN renamed THEN it throws NamespaceNotFoundError', async () => {
+    await expect(
+      new UpdateNamespaceUseCase(repository).execute('missing', 'x'),
+    ).rejects.toBeInstanceOf(NamespaceNotFoundError);
+  });
+
+  it('GIVEN an invalid new name WHEN renamed THEN it throws a validation error', async () => {
+    await repository.save(Namespace.create('users'));
+    await expect(
+      new UpdateNamespaceUseCase(repository).execute('users', 'bad name'),
+    ).rejects.toBeInstanceOf(InvalidResourceNameError);
+  });
+});
+
+describe('DeleteNamespaceUseCase', () => {
+  it('GIVEN an existing namespace WHEN deleted THEN it is removed', async () => {
+    await repository.save(Namespace.create('users'));
+    await new DeleteNamespaceUseCase(repository).execute('users');
+    expect(await repository.existsByName('users')).toBe(false);
+  });
+
+  it('GIVEN a missing namespace WHEN deleted THEN it throws NamespaceNotFoundError', async () => {
+    await expect(new DeleteNamespaceUseCase(repository).execute('missing')).rejects.toBeInstanceOf(
+      NamespaceNotFoundError,
+    );
+  });
+});
