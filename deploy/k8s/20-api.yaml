@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: okvns-api
+  namespace: okvns
+  labels:
+    app.kubernetes.io/name: okvns-api
+    app.kubernetes.io/part-of: okvns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: okvns-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: okvns-api
+        app.kubernetes.io/part-of: okvns
+    spec:
+      containers:
+        - name: api
+          # Build locally: docker build -f apps/api/Dockerfile -t okvns/api:latest .
+          image: okvns/api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: okvns-api-config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: okvns-api
+  namespace: okvns
+  labels:
+    app.kubernetes.io/name: okvns-api
+    app.kubernetes.io/part-of: okvns
+spec:
+  selector:
+    app.kubernetes.io/name: okvns-api
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
