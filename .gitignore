@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Coverage outputs
+coverage/
+
+# Playwright artifacts
+playwright-report/
+test-results/
+/blob-report/
+.playwright/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.e2e
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.log

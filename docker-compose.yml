@@ -1,0 +1,24 @@
+# Local OKVNS platform: API + admin frontend, in-memory state only.
+# No databases, Redis, queues, volumes, or secrets.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      OKVNS_API_PORT: "3000"
+      OKVNS_CORS_ORIGIN: "*"
+    ports:
+      - "3000:3000"
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: apps/admin-web/Dockerfile
+    environment:
+      # Reachable from the user's browser, so it points at the host-mapped API.
+      OKVNS_API_BASE_URL: "http://localhost:3000"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api

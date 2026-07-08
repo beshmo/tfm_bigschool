@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: okvns-api-config
+  namespace: okvns
+  labels:
+    app.kubernetes.io/name: okvns-api
+    app.kubernetes.io/part-of: okvns
+data:
+  OKVNS_API_PORT: "3000"
+  OKVNS_CORS_ORIGIN: "*"

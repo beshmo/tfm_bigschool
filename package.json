@@ -1,0 +1,32 @@
+{
+  "name": "okvns",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OKVNS: organized UTF-8 key-value entries inside namespaces.",
+  "license": "SEE LICENSE IN LICENSE",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" run build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm -r run test",
+    "test:coverage": "pnpm -r run test:coverage",
+    "test:e2e": "pnpm --filter @okvns/api run build && pnpm --filter @okvns/admin-web run build:e2e && playwright test",
+    "test:e2e:install": "playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "@typescript-eslint/parser": "^8.8.0",
+    "@vitest/coverage-v8": "^2.1.2",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.2"
+  }
+}
