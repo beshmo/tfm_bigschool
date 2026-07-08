@@ -1,0 +1,28 @@
+import { expect, test } from '@playwright/test';
+
+const nsA = `e2e-import-a-${Date.now()}`;
+const nsB = `e2e-import-b-${Date.now()}`;
+
+test('import markdown containing multiple namespaces and entries', async ({ page }) => {
+  const markdown = `namespaces:
+  - name: ${nsA}
+    entries:
+      - name: admin
+        value: secret
+  - name: ${nsB}
+    entries:
+      - name: token
+        value: abc`;
+
+  await page.goto('/import');
+  await page.getByLabel('Markdown', { exact: true }).fill(markdown);
+  await page.getByRole('button', { name: 'Import' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Imported namespaces' })).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: nsA })).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: nsB })).toBeVisible();
+
+  // Verify the imported namespaces are now listed on the home page.
+  await page.getByRole('link', { name: 'Namespaces', exact: true }).click();
+  await expect(page.getByRole('link', { name: nsA, exact: true })).toBeVisible();
+});
