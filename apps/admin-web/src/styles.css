@@ -1,0 +1,120 @@
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --border: #d7dbe0;
+  --text: #1c2530;
+  --accent: #2563eb;
+  --danger: #b91c1c;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+header {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.brand {
+  font-size: 1.4rem;
+  margin: 0 0 0.5rem;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+}
+
+nav a {
+  text-decoration: none;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+nav a.active {
+  text-decoration: underline;
+}
+
+form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+input,
+textarea,
+select {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  background: var(--surface);
+}
+
+textarea {
+  width: 100%;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+}
+
+button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  font: inherit;
+}
+
+button[type='submit'] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.error-banner {
+  color: var(--danger);
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
