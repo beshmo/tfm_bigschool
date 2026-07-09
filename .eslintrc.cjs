@@ -25,6 +25,11 @@ module.exports = {
     'test-results',
     '**/public/**',
     '**/*.d.ts',
+    '.agents',
+    '.claude',
+    '.codex',
+    '.husky',
+    '.opencode',
   ],
   rules: {
     '@typescript-eslint/no-unused-vars': [
