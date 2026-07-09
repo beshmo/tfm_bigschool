@@ -4,7 +4,10 @@ RUN corepack enable
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @okvns/shared --filter @okvns/domain --filter @okvns/markdown --filter @okvns/application run build \
+RUN pnpm --filter @okvns/shared run build \
+  && pnpm --filter @okvns/domain run build \
+  && pnpm --filter @okvns/markdown run build \
+  && pnpm --filter @okvns/application run build \
   && pnpm --filter @okvns/api run build
 # Produce a self-contained deployment with only production dependencies.
 RUN pnpm --filter @okvns/api deploy --prod /app
