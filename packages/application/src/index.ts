@@ -15,7 +15,7 @@ export {
   DeleteEntryUseCase,
 } from './entry-use-cases.js';
 export {
-  ImportMarkdownUseCase,
-  ExportMarkdownUseCase,
-  ExportNamespaceMarkdownUseCase,
-} from './markdown-use-cases.js';
+  ImportYamlUseCase,
+  ExportYamlUseCase,
+  ExportNamespaceYamlUseCase,
+} from './yaml-use-cases.js';

@@ -172,43 +172,44 @@ describe('Entry endpoints', () => {
   });
 });
 
-describe('Markdown endpoints', () => {
-  it('POST /markdown/import imports multiple namespaces', async () => {
-    const markdown = `namespaces:
+describe('YAML endpoints', () => {
+  it('POST /yaml/import imports multiple namespaces', async () => {
+    const yaml = `namespaces:
   - name: users
     entries:
       - name: admin
         value: secret
   - name: settings
     entries: []`;
-    const res = await http.post('/markdown/import').send({ markdown });
+    const res = await http.post('/yaml/import').send({ yaml });
     expect(res.status).toBe(201);
     expect(res.body.namespaces.map((n: { name: string }) => n.name)).toEqual(['users', 'settings']);
   });
 
-  it('POST /markdown/import returns 400 for invalid markdown', async () => {
-    const res = await http.post('/markdown/import').send({ markdown: 'unexpected: true' });
+  it('POST /yaml/import returns 400 for invalid YAML', async () => {
+    const res = await http.post('/yaml/import').send({ yaml: 'unexpected: true' });
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_MARKDOWN');
+    expect(res.body.error.code).toBe('INVALID_YAML');
   });
 
-  it('GET /markdown/export exports all namespaces', async () => {
+  it('GET /yaml/export exports all namespaces as raw YAML', async () => {
     await http.post('/namespaces').send({ name: 'users' });
-    const res = await http.get('/markdown/export');
+    const res = await http.get('/yaml/export');
     expect(res.status).toBe(200);
-    expect(res.body.markdown).toContain('users');
+    expect(res.body.yaml).toContain('users');
+    expect(res.body.yaml).not.toContain('```');
   });
 
-  it('GET /markdown/export/:namespace exports one namespace', async () => {
+  it('GET /yaml/export/:namespace exports one namespace', async () => {
     await http.post('/namespaces').send({ name: 'users' });
     await http.post('/namespaces').send({ name: 'settings' });
-    const res = await http.get('/markdown/export/users');
-    expect(res.body.markdown).toContain('users');
-    expect(res.body.markdown).not.toContain('settings');
+    const res = await http.get('/yaml/export/users');
+    expect(res.body.yaml).toContain('users');
+    expect(res.body.yaml).not.toContain('settings');
   });
 
-  it('GET /markdown/export/:namespace returns 404 for a missing namespace', async () => {
-    const res = await http.get('/markdown/export/missing');
+  it('GET /yaml/export/:namespace returns 404 for a missing namespace', async () => {
+    const res = await http.get('/yaml/export/missing');
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NAMESPACE_NOT_FOUND');
   });

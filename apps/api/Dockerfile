@@ -6,7 +6,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @okvns/shared run build \
   && pnpm --filter @okvns/domain run build \
-  && pnpm --filter @okvns/markdown run build \
+  && pnpm --filter @okvns/yaml run build \
   && pnpm --filter @okvns/application run build \
   && pnpm --filter @okvns/api run build
 # Produce a self-contained deployment with only production dependencies.

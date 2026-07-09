@@ -9,7 +9,7 @@ OKVNS is a pnpm monorepo built along clean-architecture boundaries.
 | `packages/shared` | Framework-independent types, constants, and helpers. |
 | `packages/domain` | Entities, value objects, invariants, and business errors. |
 | `packages/application` | Use cases and repository ports. |
-| `packages/markdown` | Strict OKVNS markdown/YAML parser and serializer. |
+| `packages/yaml` | Strict OKVNS YAML parser and serializer. |
 | `apps/api` | NestJS REST API and in-memory repository adapter. |
 | `apps/admin-web` | React + Vite admin frontend. |
 

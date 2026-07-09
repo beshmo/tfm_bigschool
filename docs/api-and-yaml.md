@@ -1,4 +1,4 @@
-# API And Markdown Reference
+# API And YAML Reference
 
 ## API Endpoints
 
@@ -16,9 +16,9 @@
 | GET | `/namespaces/:name/entries/:entry` | Get an entry. |
 | PUT | `/namespaces/:name/entries/:entry` | Update an entry (`{ "name"?, "value"? }`). |
 | DELETE | `/namespaces/:name/entries/:entry` | Delete an entry. |
-| POST | `/markdown/import` | Import markdown (`{ "markdown": "..." }`). |
-| GET | `/markdown/export` | Export all namespaces as markdown. |
-| GET | `/markdown/export/:name` | Export a single namespace as markdown. |
+| POST | `/yaml/import` | Import YAML (`{ "yaml": "..." }`). |
+| GET | `/yaml/export` | Export all namespaces as YAML (`{ "yaml": "..." }`). |
+| GET | `/yaml/export/:name` | Export a single namespace as YAML (`{ "yaml": "..." }`). |
 
 ## Names
 
@@ -38,11 +38,13 @@ Errors use a safe shape and never leak stack traces or implementation details:
 { "error": { "code": "DUPLICATE_NAMESPACE", "message": "...", "details": ["..."] } }
 ```
 
-## Markdown Import
+Invalid YAML content or shapes surface as `INVALID_YAML` with HTTP 400.
+
+## YAML Import
 
 The canonical shape uses a `namespaces` array. The original single `namespace` object shape is also accepted on import for compatibility.
 
-Content may optionally be wrapped in a YAML code fence.
+Import content must be raw YAML; it is not wrapped in a code fence.
 
 Only these keys are allowed:
 
@@ -62,7 +64,7 @@ The importer rejects:
 
 Import validates the full document before mutating storage. Valid imports upsert by namespace name: imported namespaces are created when missing and replace entries when already present.
 
-## Canonical Markdown Example
+## Canonical YAML Example
 
 ```yaml
 namespaces:
@@ -74,4 +76,20 @@ namespaces:
     entries: []
 ```
 
-Export always uses the canonical `namespaces` array shape and deterministic ordering.
+Export always returns raw YAML using the canonical `namespaces` array shape and deterministic ordering. The exported content is plain YAML, not wrapped in a markdown code fence.
+
+## Migration From The Markdown Contract
+
+This bulk import/export contract replaces the previous markdown contract. The change is breaking:
+
+| Before (markdown) | After (YAML) |
+| --- | --- |
+| `POST /markdown/import` | `POST /yaml/import` |
+| `GET /markdown/export` | `GET /yaml/export` |
+| `GET /markdown/export/:name` | `GET /yaml/export/:name` |
+| Request field `{ "markdown": "..." }` | Request field `{ "yaml": "..." }` |
+| Response field `{ "markdown": "..." }` | Response field `{ "yaml": "..." }` |
+| Export wrapped in a ```` ```yaml ```` code fence | Raw YAML, no code fence |
+| Error code `INVALID_MARKDOWN` | Error code `INVALID_YAML` |
+
+Clients must switch to the `/yaml/*` routes, send and read the `yaml` field, stop parsing fenced output, and handle `INVALID_YAML` instead of `INVALID_MARKDOWN`.

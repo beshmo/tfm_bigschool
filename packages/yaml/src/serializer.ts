@@ -2,11 +2,11 @@ import { stringify as stringifyYaml } from 'yaml';
 import { compareNames, type NamespaceDto } from '@okvns/shared';
 
 /**
- * Serializes namespaces into canonical OKVNS markdown: a single ```yaml fenced
- * block using the `namespaces` array shape, with namespaces and entries sorted
- * by name for deterministic output.
+ * Serializes namespaces into canonical OKVNS YAML: a raw YAML document using the
+ * `namespaces` array shape, with namespaces and entries sorted by name for
+ * deterministic output. The result is plain YAML, not wrapped in a code fence.
  */
-export function serializeNamespacesMarkdown(namespaces: NamespaceDto[]): string {
+export function serializeNamespacesYaml(namespaces: NamespaceDto[]): string {
   const sorted = [...namespaces]
     .map((namespace) => ({
       name: namespace.name,
@@ -16,6 +16,5 @@ export function serializeNamespacesMarkdown(namespaces: NamespaceDto[]): string 
     }))
     .sort((a, b) => compareNames(a.name, b.name));
 
-  const yaml = stringifyYaml({ namespaces: sorted }).trimEnd();
-  return '```yaml\n' + yaml + '\n```\n';
+  return stringifyYaml({ namespaces: sorted });
 }

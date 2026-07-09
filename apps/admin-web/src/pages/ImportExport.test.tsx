@@ -5,13 +5,13 @@ import { FakeOkvnsApi } from '../test/fake-api';
 import { renderApp } from '../test/render';
 
 describe('ImportPage', () => {
-  it('imports valid markdown and shows the imported namespaces', async () => {
+  it('imports valid YAML and shows the imported namespaces', async () => {
     const api = new FakeOkvnsApi();
     api.seed([{ name: 'users', entries: [] }]);
     renderApp(api, '/import');
 
     await userEvent.type(
-      await screen.findByLabelText('Markdown'),
+      await screen.findByLabelText('YAML'),
       'namespace: users',
     );
     await userEvent.click(screen.getByRole('button', { name: 'Import' }));
@@ -24,7 +24,7 @@ describe('ImportPage', () => {
     const api = new FakeOkvnsApi();
     renderApp(api, '/import');
 
-    const textarea = await screen.findByLabelText('Markdown');
+    const textarea = await screen.findByLabelText('YAML');
     await userEvent.type(textarea, 'bogus');
     await userEvent.click(screen.getByRole('button', { name: 'Import' }));
 
@@ -44,7 +44,7 @@ describe('ExportPage', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Export all namespaces' }));
 
-    const output = (await screen.findByLabelText('Exported markdown')) as HTMLTextAreaElement;
+    const output = (await screen.findByLabelText('Exported YAML')) as HTMLTextAreaElement;
     expect(output.value).toContain('users');
     expect(output.value).toContain('settings');
   });
@@ -60,7 +60,7 @@ describe('ExportPage', () => {
     await userEvent.selectOptions(await screen.findByLabelText('Namespace'), 'settings');
     await userEvent.click(screen.getByRole('button', { name: 'Export selected namespace' }));
 
-    const output = (await screen.findByLabelText('Exported markdown')) as HTMLTextAreaElement;
+    const output = (await screen.findByLabelText('Exported YAML')) as HTMLTextAreaElement;
     expect(output.value).toContain('settings');
     expect(output.value).not.toContain('users');
   });

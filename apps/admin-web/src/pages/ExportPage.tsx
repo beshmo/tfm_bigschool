@@ -8,7 +8,7 @@ export function ExportPage() {
   const api = useApi();
   const [namespaces, setNamespaces] = useState<NamespaceDto[]>([]);
   const [selected, setSelected] = useState('');
-  const [markdown, setMarkdown] = useState('');
+  const [yaml, setYaml] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -30,7 +30,7 @@ export function ExportPage() {
   async function onExportAll() {
     setError(null);
     try {
-      setMarkdown(await api.exportAll());
+      setYaml(await api.exportAll());
     } catch (err) {
       setError(messageOf(err));
     }
@@ -39,7 +39,7 @@ export function ExportPage() {
   async function onExportSelected() {
     setError(null);
     try {
-      setMarkdown(await api.exportNamespace(selected));
+      setYaml(await api.exportNamespace(selected));
     } catch (err) {
       setError(messageOf(err));
     }
@@ -47,23 +47,23 @@ export function ExportPage() {
 
   async function onCopy() {
     if (navigator.clipboard) {
-      await navigator.clipboard.writeText(markdown);
+      await navigator.clipboard.writeText(yaml);
     }
   }
 
   function onDownload() {
-    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const blob = new Blob([yaml], { type: 'application/yaml' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'okvns-export.md';
+    anchor.download = 'okvns-export.yaml';
     anchor.click();
     URL.revokeObjectURL(url);
   }
 
   return (
     <section>
-      <h1>Export markdown</h1>
+      <h1>Export YAML</h1>
 
       <div>
         <button type="button" onClick={onExportAll}>
@@ -91,10 +91,10 @@ export function ExportPage() {
 
       {error && <ErrorBanner message={error} />}
 
-      {markdown && (
+      {yaml && (
         <div>
-          <label htmlFor="export-output">Exported markdown</label>
-          <textarea id="export-output" rows={12} readOnly value={markdown} />
+          <label htmlFor="export-output">Exported YAML</label>
+          <textarea id="export-output" rows={12} readOnly value={yaml} />
           <button type="button" onClick={onCopy}>
             Copy
           </button>

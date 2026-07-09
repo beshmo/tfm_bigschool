@@ -3,8 +3,8 @@ import { expect, test } from '@playwright/test';
 const nsA = `e2e-import-a-${Date.now()}`;
 const nsB = `e2e-import-b-${Date.now()}`;
 
-test('import markdown containing multiple namespaces and entries', async ({ page }) => {
-  const markdown = `namespaces:
+test('import YAML containing multiple namespaces and entries', async ({ page }) => {
+  const yaml = `namespaces:
   - name: ${nsA}
     entries:
       - name: admin
@@ -15,7 +15,7 @@ test('import markdown containing multiple namespaces and entries', async ({ page
         value: abc`;
 
   await page.goto('/import');
-  await page.getByLabel('Markdown', { exact: true }).fill(markdown);
+  await page.getByLabel('YAML', { exact: true }).fill(yaml);
   await page.getByRole('button', { name: 'Import' }).click();
 
   await expect(page.getByRole('heading', { name: 'Imported namespaces' })).toBeVisible();

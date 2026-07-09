@@ -8,7 +8,7 @@
   "references": [
     { "path": "../shared" },
     { "path": "../domain" },
-    { "path": "../markdown" }
+    { "path": "../yaml" }
   ],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts", "dist", "node_modules"]

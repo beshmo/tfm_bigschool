@@ -6,7 +6,7 @@ export {
   DuplicateEntryError,
   NamespaceNotFoundError,
   EntryNotFoundError,
-  InvalidMarkdownError,
+  InvalidYamlError,
 } from './errors.js';
 export { ResourceName } from './resource-name.js';
 export { Entry } from './entry.js';

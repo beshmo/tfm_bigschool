@@ -4,11 +4,11 @@ import {
   CreateNamespaceUseCase,
   DeleteEntryUseCase,
   DeleteNamespaceUseCase,
-  ExportMarkdownUseCase,
-  ExportNamespaceMarkdownUseCase,
+  ExportYamlUseCase,
+  ExportNamespaceYamlUseCase,
   GetEntryUseCase,
   GetNamespaceUseCase,
-  ImportMarkdownUseCase,
+  ImportYamlUseCase,
   ListEntriesUseCase,
   ListNamespacesUseCase,
   type NamespaceRepository,
@@ -18,7 +18,7 @@ import {
 import { HealthController } from './health/health.controller';
 import { NamespacesController } from './namespaces/namespaces.controller';
 import { EntriesController } from './entries/entries.controller';
-import { MarkdownController } from './markdown/markdown.controller';
+import { YamlController } from './yaml/yaml.controller';
 import { InMemoryNamespaceRepository } from './infrastructure/in-memory-namespace-repository';
 import { NAMESPACE_REPOSITORY } from './infrastructure/tokens';
 
@@ -38,7 +38,7 @@ function useCaseProvider<T>(
     HealthController,
     NamespacesController,
     EntriesController,
-    MarkdownController,
+    YamlController,
   ],
   providers: [
     { provide: NAMESPACE_REPOSITORY, useClass: InMemoryNamespaceRepository },
@@ -52,9 +52,9 @@ function useCaseProvider<T>(
     useCaseProvider(GetEntryUseCase),
     useCaseProvider(UpdateEntryUseCase),
     useCaseProvider(DeleteEntryUseCase),
-    useCaseProvider(ImportMarkdownUseCase),
-    useCaseProvider(ExportMarkdownUseCase),
-    useCaseProvider(ExportNamespaceMarkdownUseCase),
+    useCaseProvider(ImportYamlUseCase),
+    useCaseProvider(ExportYamlUseCase),
+    useCaseProvider(ExportNamespaceYamlUseCase),
   ],
 })
 export class AppModule {}

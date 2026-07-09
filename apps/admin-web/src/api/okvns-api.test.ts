@@ -52,16 +52,16 @@ describe('HttpOkvnsApi', () => {
     await expect(api.listNamespaces()).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
   });
 
-  it('unwraps importMarkdown and export responses', async () => {
+  it('unwraps importYaml and export responses', async () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ namespaces: [{ name: 'a', entries: [] }] }, 201))
-      .mockResolvedValueOnce(jsonResponse({ markdown: '# all' }))
-      .mockResolvedValueOnce(jsonResponse({ markdown: '# one' }));
+      .mockResolvedValueOnce(jsonResponse({ yaml: 'namespaces: []' }))
+      .mockResolvedValueOnce(jsonResponse({ yaml: 'namespace: a' }));
     const api = new HttpOkvnsApi('http://api.test', fetchImpl);
-    expect(await api.importMarkdown('md')).toEqual([{ name: 'a', entries: [] }]);
-    expect(await api.exportAll()).toBe('# all');
-    expect(await api.exportNamespace('a')).toBe('# one');
+    expect(await api.importYaml('namespaces: []')).toEqual([{ name: 'a', entries: [] }]);
+    expect(await api.exportAll()).toBe('namespaces: []');
+    expect(await api.exportNamespace('a')).toBe('namespace: a');
   });
 });
 

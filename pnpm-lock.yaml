@@ -100,12 +100,12 @@ importers:
       '@okvns/domain':
         specifier: workspace:*
         version: link:../../packages/domain
-      '@okvns/markdown':
-        specifier: workspace:*
-        version: link:../../packages/markdown
       '@okvns/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@okvns/yaml':
+        specifier: workspace:*
+        version: link:../../packages/yaml
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -161,12 +161,12 @@ importers:
       '@okvns/domain':
         specifier: workspace:*
         version: link:../domain
-      '@okvns/markdown':
-        specifier: workspace:*
-        version: link:../markdown
       '@okvns/shared':
         specifier: workspace:*
         version: link:../shared
+      '@okvns/yaml':
+        specifier: workspace:*
+        version: link:../yaml
     devDependencies:
       typescript:
         specifier: ^5.6.2
@@ -188,7 +188,16 @@ importers:
         specifier: ^2.1.2
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
 
-  packages/markdown:
+  packages/shared:
+    devDependencies:
+      typescript:
+        specifier: ^5.6.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.2
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
+
+  packages/yaml:
     dependencies:
       '@okvns/shared':
         specifier: workspace:*
@@ -200,15 +209,6 @@ importers:
       '@types/node':
         specifier: ^22.7.4
         version: 22.20.0
-      typescript:
-        specifier: ^5.6.2
-        version: 5.9.3
-      vitest:
-        specifier: ^2.1.2
-        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
-
-  packages/shared:
-    devDependencies:
       typescript:
         specifier: ^5.6.2
         version: 5.9.3

@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-OKVNS has business invariants, use-case orchestration, strict markdown validation, REST contracts, React workflows, and browser E2E flows. Failures at each layer should be caught close to the source.
+OKVNS has business invariants, use-case orchestration, strict YAML validation, REST contracts, React workflows, and browser E2E flows. Failures at each layer should be caught close to the source.
 
 The API also handles untrusted input and must avoid exposing implementation details.
 
@@ -16,7 +16,7 @@ Use a layered test strategy with safe API error responses.
 
 Testing expectations are:
 
-- Domain, application, and markdown packages have focused Vitest coverage, with domain and application targeting full coverage.
+- Domain, application, and YAML packages have focused Vitest coverage, with domain and application targeting full coverage.
 - API contract tests cover documented endpoints, status codes, validation failures, duplicates, not-found cases, and safe error shapes.
 - React tests cover key component flows, routing, API client mapping, and validation/API error handling.
 - Playwright tests cover critical browser workflows.
