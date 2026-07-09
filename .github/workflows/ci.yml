@@ -44,11 +44,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Run tests
-        run: pnpm test
-
       - name: Build
         run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
 
   e2e:
     name: Playwright E2E
