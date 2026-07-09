@@ -65,7 +65,7 @@ describe('HttpOkvnsApi', () => {
   });
 
   it('POST importYaml sends a JSON yaml field', async () => {
-    const fetchImpl = vi.fn(async () =>
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       jsonResponse({ namespaces: [{ name: 'a', entries: [] }] }, 201),
     );
     const api = new HttpOkvnsApi('http://api.test', fetchImpl);
@@ -81,7 +81,7 @@ describe('HttpOkvnsApi', () => {
   });
 
   it('POST importYamlFile sends multipart FormData with the file field', async () => {
-    const fetchImpl = vi.fn(async () =>
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       jsonResponse({ namespaces: [{ name: 'a', entries: [] }] }, 201),
     );
     const api = new HttpOkvnsApi('http://api.test', fetchImpl);
@@ -89,8 +89,12 @@ describe('HttpOkvnsApi', () => {
 
     expect(await api.importYamlFile(file)).toEqual([{ name: 'a', entries: [] }]);
 
-    const [url, init] = fetchImpl.mock.calls[0];
+    const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toBe('http://api.test/yaml/import');
+    expect(init).toBeDefined();
+    if (!init) {
+      throw new Error('Expected importYamlFile to pass request options');
+    }
     expect(init).toMatchObject({ method: 'POST' });
     // The browser must set the multipart boundary, so no Content-Type is sent.
     expect(init.headers).toBeUndefined();
