@@ -63,6 +63,44 @@ describe('HttpOkvnsApi', () => {
     expect(await api.exportAll()).toBe('namespaces: []');
     expect(await api.exportNamespace('a')).toBe('namespace: a');
   });
+
+  it('POST importYaml sends a JSON yaml field', async () => {
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse({ namespaces: [{ name: 'a', entries: [] }] }, 201),
+    );
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.importYaml('namespaces: []');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/yaml/import',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yaml: 'namespaces: []' }),
+      }),
+    );
+  });
+
+  it('POST importYamlFile sends multipart FormData with the file field', async () => {
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      jsonResponse({ namespaces: [{ name: 'a', entries: [] }] }, 201),
+    );
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    const file = new File(['namespaces: []'], 'import.yaml', { type: 'application/x-yaml' });
+
+    expect(await api.importYamlFile(file)).toEqual([{ name: 'a', entries: [] }]);
+
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    expect(url).toBe('http://api.test/yaml/import');
+    expect(init).toBeDefined();
+    if (!init) {
+      throw new Error('Expected importYamlFile to pass request options');
+    }
+    expect(init).toMatchObject({ method: 'POST' });
+    // The browser must set the multipart boundary, so no Content-Type is sent.
+    expect(init.headers).toBeUndefined();
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get('file')).toBe(file);
+  });
 });
 
 describe('toApiError', () => {

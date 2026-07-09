@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import type { NamespaceDto } from '@okvns/shared';
 import { useApi } from '../api/api-context';
 import { messageOf } from '../api/error-message';
@@ -13,6 +13,7 @@ const PLACEHOLDER = `namespaces:
 export function ImportPage() {
   const api = useApi();
   const [yaml, setYaml] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imported, setImported] = useState<NamespaceDto[] | null>(null);
 
@@ -24,6 +25,26 @@ export function ImportPage() {
       setImported(namespaces);
     } catch (err) {
       // Keep the submitted content available for correction.
+      setImported(null);
+      setError(messageOf(err));
+    }
+  }
+
+  function onFileChange(event: ChangeEvent<HTMLInputElement>) {
+    setFile(event.target.files?.[0] ?? null);
+  }
+
+  async function onImportFile(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    if (!file) {
+      return;
+    }
+    try {
+      const namespaces = await api.importYamlFile(file);
+      setImported(namespaces);
+    } catch (err) {
+      // Leave the selected file visible so the user can retry or choose another.
       setImported(null);
       setError(messageOf(err));
     }
@@ -42,6 +63,14 @@ export function ImportPage() {
           onChange={(event) => setYaml(event.target.value)}
         />
         <button type="submit">Import</button>
+      </form>
+
+      <form onSubmit={onImportFile} aria-label="Import YAML file">
+        <label htmlFor="import-yaml-file">YAML file</label>
+        <input id="import-yaml-file" type="file" accept=".yaml,.yml" onChange={onFileChange} />
+        <button type="submit" disabled={!file}>
+          Import file
+        </button>
       </form>
 
       {error && <ErrorBanner message={error} />}

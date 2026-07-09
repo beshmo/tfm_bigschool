@@ -18,6 +18,7 @@ export interface OkvnsApi {
   updateEntry(namespace: string, name: string, changes: EntryChangesInput): Promise<EntryDto>;
   deleteEntry(namespace: string, name: string): Promise<void>;
   importYaml(yaml: string): Promise<NamespaceDto[]>;
+  importYamlFile(file: File): Promise<NamespaceDto[]>;
   exportAll(): Promise<string>;
   exportNamespace(name: string): Promise<string>;
 }
@@ -119,6 +120,18 @@ export class HttpOkvnsApi implements OkvnsApi {
       method: 'POST',
       headers: JSON_HEADERS,
       body: JSON.stringify({ yaml }),
+    });
+    return result.namespaces;
+  }
+
+  async importYamlFile(file: File): Promise<NamespaceDto[]> {
+    // The selected file is posted as multipart form data under field `file`.
+    // Content-Type is intentionally left unset so the browser adds the boundary.
+    const form = new FormData();
+    form.append('file', file);
+    const result = await this.request<{ namespaces: NamespaceDto[] }>('/yaml/import', {
+      method: 'POST',
+      body: form,
     });
     return result.namespaces;
   }
