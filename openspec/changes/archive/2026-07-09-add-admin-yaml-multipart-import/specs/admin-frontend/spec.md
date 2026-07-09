@@ -1,30 +1,4 @@
-## Purpose
-
-React admin frontend for the OKVNS platform. Provides browser-based namespace management, entry management, YAML import, and YAML export through an isolated API client. Backed by React Testing Library tests and Playwright E2E workflows.
-
-## Requirements
-
-### Requirement: Admin namespace management UI
-The React admin frontend SHALL allow admin users to list, create, edit, view, and delete namespaces through the OKVNS API.
-
-#### Scenario: Admin creates namespace
-- **WHEN** an admin submits a valid namespace creation form
-- **THEN** the UI calls the API, shows the created namespace, and clears or resets the form state
-
-#### Scenario: Admin sees namespace validation error
-- **WHEN** an admin submits an invalid or duplicate namespace
-- **THEN** the UI displays a useful validation or API error without exposing stack traces
-
-### Requirement: Admin entry management UI
-The React admin frontend SHALL allow admin users to list, create, edit, view, and delete entries within a selected namespace through the OKVNS API.
-
-#### Scenario: Admin creates entry
-- **WHEN** an admin submits a valid entry form for a namespace
-- **THEN** the UI calls the API and shows the new entry in that namespace
-
-#### Scenario: Admin deletes entry
-- **WHEN** an admin confirms deletion of an existing entry
-- **THEN** the UI calls the API and removes the entry from the namespace view
+## MODIFIED Requirements
 
 ### Requirement: Admin YAML import UI
 The React admin frontend SHALL allow admin users to paste YAML content or upload a YAML file and import namespaces and entries through the OKVNS API. Pasted YAML MUST be submitted through the JSON `yaml` request field. Uploaded YAML files MUST be submitted directly as `multipart/form-data` using a single file field named `file`.
@@ -46,24 +20,6 @@ The React admin frontend SHALL allow admin users to paste YAML content or upload
 #### Scenario: Admin sees uploaded import validation error
 - **WHEN** an admin uploads invalid YAML content
 - **THEN** the UI displays the API validation error without exposing transport internals
-
-### Requirement: Admin YAML export UI
-The React admin frontend SHALL allow admin users to export all namespaces or a selected namespace as YAML.
-
-#### Scenario: Admin exports all namespaces
-- **WHEN** an admin requests a full YAML export
-- **THEN** the UI retrieves YAML from the API and presents it for copy or download as a `.yaml` file
-
-#### Scenario: Admin exports selected namespace
-- **WHEN** an admin requests YAML export for one namespace
-- **THEN** the UI retrieves YAML containing only that namespace
-
-### Requirement: Frontend API mapping and tests
-The React admin frontend SHALL isolate API request/response mapping from components and SHALL cover key UI behavior with Vitest and React Testing Library.
-
-#### Scenario: API error is mapped for display
-- **WHEN** the API returns a safe error response
-- **THEN** the frontend API client maps it into UI state without relying on transport internals
 
 ### Requirement: Initial E2E workflows
 The project SHALL include Playwright workflows for namespace CRUD, entry CRUD, YAML import, and YAML export.
