@@ -89,6 +89,7 @@ Local URLs:
 
 ```bash
 pnpm lint
+pnpm typecheck
 pnpm test
 pnpm test:coverage
 pnpm build
