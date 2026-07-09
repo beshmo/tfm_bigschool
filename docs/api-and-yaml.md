@@ -16,7 +16,7 @@
 | GET | `/namespaces/:name/entries/:entry` | Get an entry. |
 | PUT | `/namespaces/:name/entries/:entry` | Update an entry (`{ "name"?, "value"? }`). |
 | DELETE | `/namespaces/:name/entries/:entry` | Delete an entry. |
-| POST | `/yaml/import` | Import YAML (`{ "yaml": "..." }`). |
+| POST | `/yaml/import` | Import YAML (`{ "yaml": "..." }` JSON, or multipart file field `file`). |
 | GET | `/yaml/export` | Export all namespaces as YAML (`{ "yaml": "..." }`). |
 | GET | `/yaml/export/:name` | Export a single namespace as YAML (`{ "yaml": "..." }`). |
 
@@ -45,6 +45,25 @@ Invalid YAML content or shapes surface as `INVALID_YAML` with HTTP 400.
 The canonical shape uses a `namespaces` array. The original single `namespace` object shape is also accepted on import for compatibility.
 
 Import content must be raw YAML; it is not wrapped in a code fence.
+
+### Request Formats
+
+`POST /yaml/import` accepts the YAML document in either of two formats:
+
+- **JSON body** (`application/json`): `{ "yaml": "<raw YAML>" }`.
+- **Multipart upload** (`multipart/form-data`): a single file field named `file`
+  whose content is the UTF-8 OKVNS YAML document.
+
+Both formats route through the same importer, so validation, atomicity, upsert
+semantics, and the successful response shape (`{ "namespaces": [...] }`) are
+identical regardless of which format is used.
+
+The uploaded file is held in memory only for the duration of the request; no
+file is written to disk. Uploads larger than the configured import payload limit
+(1 MiB) are rejected before parsing with a safe HTTP 413 Payload Too Large error
+(code `VALIDATION_ERROR`). Missing, empty, unreadable, or otherwise invalid
+uploaded content is rejected as `INVALID_YAML` (HTTP 400) without mutating
+storage.
 
 Only these keys are allowed:
 
