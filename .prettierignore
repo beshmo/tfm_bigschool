@@ -5,3 +5,10 @@ coverage
 playwright-report
 test-results
 pnpm-lock.yaml
+.agents
+.claude
+.codex
+.husky
+.opencode
+openspec
+

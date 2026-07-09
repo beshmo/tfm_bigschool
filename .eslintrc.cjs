@@ -7,11 +7,7 @@ module.exports = {
     sourceType: 'module',
   },
   plugins: ['@typescript-eslint'],
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'prettier',
-  ],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'],
   env: {
     node: true,
     es2022: true,
@@ -25,11 +21,6 @@ module.exports = {
     'test-results',
     '**/public/**',
     '**/*.d.ts',
-    '.agents',
-    '.claude',
-    '.codex',
-    '.husky',
-    '.opencode',
   ],
   rules: {
     '@typescript-eslint/no-unused-vars': [
