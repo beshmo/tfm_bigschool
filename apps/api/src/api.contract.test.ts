@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { REQUEST_BODY_MAX_BYTES } from '@okvns/shared';
 import { createTestApp } from '../test/create-test-app';
 
 let app: INestApplication;
@@ -190,6 +191,66 @@ describe('YAML endpoints', () => {
     const res = await http.post('/yaml/import').send({ yaml: 'unexpected: true' });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_YAML');
+  });
+
+  it('POST /yaml/import imports YAML from a multipart file field', async () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret
+  - name: settings
+    entries: []`;
+    const res = await http
+      .post('/yaml/import')
+      .attach('file', Buffer.from(yaml, 'utf8'), {
+        filename: 'import.yaml',
+        contentType: 'application/x-yaml',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.namespaces.map((n: { name: string }) => n.name)).toEqual(['users', 'settings']);
+  });
+
+  it('POST /yaml/import rejects a multipart request without the file field', async () => {
+    const res = await http.post('/yaml/import').field('description', 'no file here');
+    expect(res.status).toBe(400);
+    expect(res.body.error).not.toHaveProperty('stack');
+    expect((await http.get('/namespaces')).body).toEqual([]);
+  });
+
+  it('POST /yaml/import returns 400 for an empty multipart file', async () => {
+    const res = await http
+      .post('/yaml/import')
+      .attach('file', Buffer.from('', 'utf8'), {
+        filename: 'empty.yaml',
+        contentType: 'application/x-yaml',
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('INVALID_YAML');
+    expect((await http.get('/namespaces')).body).toEqual([]);
+  });
+
+  it('POST /yaml/import rejects an oversized multipart file with a safe error', async () => {
+    const oversized = Buffer.alloc(REQUEST_BODY_MAX_BYTES + 1024, 0x61);
+    const res = await http
+      .post('/yaml/import')
+      .attach('file', oversized, { filename: 'big.yaml', contentType: 'application/x-yaml' });
+    expect(res.status).toBe(413);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error).not.toHaveProperty('stack');
+    expect((await http.get('/namespaces')).body).toEqual([]);
+  });
+
+  it('POST /yaml/import returns 400 for invalid uploaded YAML', async () => {
+    const res = await http
+      .post('/yaml/import')
+      .attach('file', Buffer.from('unexpected: true', 'utf8'), {
+        filename: 'bad.yaml',
+        contentType: 'application/x-yaml',
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('INVALID_YAML');
+    expect((await http.get('/namespaces')).body).toEqual([]);
   });
 
   it('GET /yaml/export exports all namespaces as raw YAML', async () => {
