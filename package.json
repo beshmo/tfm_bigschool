@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint-staged": "lint-staged",
-    "typecheck": "pnpm -r run typecheck",
+    "typecheck": "pnpm -r --filter \"./packages/*\" run build && pnpm -r run typecheck",
     "test": "pnpm -r run test",
     "test:coverage": "pnpm -r run test:coverage",
     "test:e2e": "pnpm --filter @okvns/api... run build && pnpm --filter @okvns/admin-web run build:e2e && playwright test",
