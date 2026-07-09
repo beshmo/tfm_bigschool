@@ -101,6 +101,10 @@ export class FakeOkvnsApi implements OkvnsApi {
     return this.listNamespaces();
   }
 
+  async importYamlFile(file: File): Promise<NamespaceDto[]> {
+    return this.importYaml(await readFileText(file));
+  }
+
   async exportAll(): Promise<string> {
     const names = [...this.namespaces.keys()].sort(compareNames).join(', ');
     return `namespaces: ${names}`;
@@ -118,4 +122,14 @@ export class FakeOkvnsApi implements OkvnsApi {
     }
     return entries;
   }
+}
+
+// jsdom does not implement File.text(); read via FileReader instead.
+function readFileText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
 }

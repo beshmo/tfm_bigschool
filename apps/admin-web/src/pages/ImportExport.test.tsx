@@ -31,6 +31,30 @@ describe('ImportPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/not valid/i);
     expect(textarea).toHaveValue('bogus');
   });
+
+  it('imports an uploaded YAML file and shows the imported namespaces', async () => {
+    const api = new FakeOkvnsApi();
+    api.seed([{ name: 'users', entries: [] }]);
+    renderApp(api, '/import');
+
+    const file = new File(['namespace: users'], 'import.yaml', { type: 'application/x-yaml' });
+    await userEvent.upload(await screen.findByLabelText('YAML file'), file);
+    await userEvent.click(screen.getByRole('button', { name: 'Import file' }));
+
+    expect(await screen.findByRole('heading', { name: 'Imported namespaces' })).toBeInTheDocument();
+    expect(screen.getByText('users')).toBeInTheDocument();
+  });
+
+  it('shows an error when an uploaded YAML file is invalid', async () => {
+    const api = new FakeOkvnsApi();
+    renderApp(api, '/import');
+
+    const file = new File(['bogus'], 'bad.yaml', { type: 'application/x-yaml' });
+    await userEvent.upload(await screen.findByLabelText('YAML file'), file);
+    await userEvent.click(screen.getByRole('button', { name: 'Import file' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/not valid/i);
+  });
 });
 
 describe('ExportPage', () => {
