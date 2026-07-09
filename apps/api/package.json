@@ -18,7 +18,7 @@
     "@nestjs/platform-express": "^10.4.4",
     "@okvns/application": "workspace:*",
     "@okvns/domain": "workspace:*",
-    "@okvns/markdown": "workspace:*",
+    "@okvns/yaml": "workspace:*",
     "@okvns/shared": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",

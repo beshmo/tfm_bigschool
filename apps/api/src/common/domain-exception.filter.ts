@@ -6,13 +6,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { DomainError, InvalidMarkdownError } from '@okvns/domain';
-import { MarkdownError } from '@okvns/markdown';
+import { DomainError, InvalidYamlError } from '@okvns/domain';
+import { YamlError } from '@okvns/yaml';
 import { ERROR_CODES } from '@okvns/shared';
 import { STATUS_BY_CODE, buildApiError, codeForStatus } from './api-error';
 
 /**
- * Global exception filter. Maps domain, markdown, and framework errors to safe
+ * Global exception filter. Maps domain, YAML, and framework errors to safe
  * API error responses without leaking stack traces or implementation details.
  */
 @Catch()
@@ -23,14 +23,14 @@ export class DomainExceptionFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
 
     if (exception instanceof DomainError) {
-      const details = exception instanceof InvalidMarkdownError ? exception.details : undefined;
+      const details = exception instanceof InvalidYamlError ? exception.details : undefined;
       response
         .status(STATUS_BY_CODE[exception.code])
         .json(buildApiError(exception.code, exception.message, details));
       return;
     }
 
-    if (exception instanceof MarkdownError) {
+    if (exception instanceof YamlError) {
       response
         .status(STATUS_BY_CODE[exception.code])
         .json(buildApiError(exception.code, exception.message, exception.details));

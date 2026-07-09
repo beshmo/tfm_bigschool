@@ -41,7 +41,7 @@ Behavior tests should use clear GIVEN-WHEN-THEN wording in test names when it im
 Example:
 
 ```text
-GIVEN valid markdown WHEN it is imported THEN namespaces are stored
+GIVEN valid YAML WHEN it is imported THEN namespaces are stored
 ```
 
 Guidelines:
@@ -61,7 +61,7 @@ Rules for this MVP:
 - Use allowlists for accepted schema keys and resource names.
 - Avoid leaking stack traces, filesystem paths, secrets, tokens, or implementation details in API errors.
 - Avoid unsafe dynamic execution, prototype pollution, deserialization surprises, and implicit type coercion.
-- Apply size limits to request bodies and markdown payloads.
+- Apply size limits to request bodies and YAML payloads.
 - Log operational events without logging secrets or sensitive personal data.
 - Keep dependencies pinned through the workspace lockfile and review security updates regularly.
 
@@ -75,10 +75,10 @@ Testing expectations by layer:
 | --- | --- | --- |
 | Domain unit tests | 100% | Entities, value objects, validation rules, invariants, and business errors. |
 | Application use case tests | 100% | Namespace, entry, import, export, and repository-port orchestration. |
-| Markdown unit tests | 100% | Parser, serializer, schema validation, duplicate detection, atomic import input validation, and deterministic export. |
+| YAML unit tests | 100% | Parser, serializer, schema validation, duplicate detection, atomic import input validation, and deterministic export. |
 | API contract tests | Endpoint coverage | REST request/response contracts, status codes, validation failures, duplicates, not-found cases, and safe error shapes. |
 | React component/integration tests | Key flows | Components, forms, routing, API client mapping, and validation/API error handling. |
-| Playwright E2E workflows | Critical flows | Namespace CRUD, entry CRUD, markdown import, and markdown export. |
+| Playwright E2E workflows | Critical flows | Namespace CRUD, entry CRUD, YAML import, and YAML export. |
 
 Coverage rules:
 

@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@okvns/domain": "workspace:*",
-    "@okvns/markdown": "workspace:*",
+    "@okvns/yaml": "workspace:*",
     "@okvns/shared": "workspace:*"
   },
   "devDependencies": {

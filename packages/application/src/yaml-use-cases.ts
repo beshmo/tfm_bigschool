@@ -1,18 +1,18 @@
 import { Entry, Namespace, NamespaceNotFoundError } from '@okvns/domain';
-import { parseNamespacesMarkdown, serializeNamespacesMarkdown } from '@okvns/markdown';
+import { parseNamespacesYaml, serializeNamespacesYaml } from '@okvns/yaml';
 import { type NamespaceDto } from '@okvns/shared';
 import { type NamespaceRepository } from './ports.js';
 
-export class ImportMarkdownUseCase {
+export class ImportYamlUseCase {
   constructor(private readonly repository: NamespaceRepository) {}
 
   /**
-   * Parses and fully validates the markdown, building fresh namespace aggregates
+   * Parses and fully validates the YAML, building fresh namespace aggregates
    * before any storage write. Only after the entire document is validated are
    * the namespaces upserted, so a failure leaves storage unchanged.
    */
-  async execute(markdown: string): Promise<NamespaceDto[]> {
-    const parsed = parseNamespacesMarkdown(markdown);
+  async execute(yaml: string): Promise<NamespaceDto[]> {
+    const parsed = parseNamespacesYaml(yaml);
     const built = parsed.map((namespaceDto) => {
       const namespace = Namespace.create(namespaceDto.name);
       namespace.setEntries(namespaceDto.entries.map((entry) => Entry.create(entry.name, entry.value)));
@@ -25,16 +25,16 @@ export class ImportMarkdownUseCase {
   }
 }
 
-export class ExportMarkdownUseCase {
+export class ExportYamlUseCase {
   constructor(private readonly repository: NamespaceRepository) {}
 
   async execute(): Promise<string> {
     const namespaces = await this.repository.list();
-    return serializeNamespacesMarkdown(namespaces.map((namespace) => namespace.toDto()));
+    return serializeNamespacesYaml(namespaces.map((namespace) => namespace.toDto()));
   }
 }
 
-export class ExportNamespaceMarkdownUseCase {
+export class ExportNamespaceYamlUseCase {
   constructor(private readonly repository: NamespaceRepository) {}
 
   async execute(name: string): Promise<string> {
@@ -42,6 +42,6 @@ export class ExportNamespaceMarkdownUseCase {
     if (!namespace) {
       throw new NamespaceNotFoundError(name);
     }
-    return serializeNamespacesMarkdown([namespace.toDto()]);
+    return serializeNamespacesYaml([namespace.toDto()]);
   }
 }

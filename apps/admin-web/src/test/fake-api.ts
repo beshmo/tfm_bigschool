@@ -94,9 +94,9 @@ export class FakeOkvnsApi implements OkvnsApi {
     entries.delete(name);
   }
 
-  async importMarkdown(markdown: string): Promise<NamespaceDto[]> {
-    if (!markdown.includes('namespace')) {
-      throw new ApiError('INVALID_MARKDOWN', 'Markdown content is not valid.', [], 400);
+  async importYaml(yaml: string): Promise<NamespaceDto[]> {
+    if (!yaml.includes('namespace')) {
+      throw new ApiError('INVALID_YAML', 'YAML content is not valid.', [], 400);
     }
     return this.listNamespaces();
   }

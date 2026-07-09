@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The first OKVNS implementation is an MVP for organizing UTF-8 key-value entries inside namespaces. It needs to demonstrate the domain model, REST API, markdown import/export, admin UI, and deployment shape without committing to a database or operational data model too early.
+The first OKVNS implementation is an MVP for organizing UTF-8 key-value entries inside namespaces. It needs to demonstrate the domain model, REST API, YAML import/export, admin UI, and deployment shape without committing to a database or operational data model too early.
 
 ## Decision
 

@@ -17,7 +17,7 @@ export interface OkvnsApi {
   createEntry(namespace: string, name: string, value: string): Promise<EntryDto>;
   updateEntry(namespace: string, name: string, changes: EntryChangesInput): Promise<EntryDto>;
   deleteEntry(namespace: string, name: string): Promise<void>;
-  importMarkdown(markdown: string): Promise<NamespaceDto[]>;
+  importYaml(yaml: string): Promise<NamespaceDto[]>;
   exportAll(): Promise<string>;
   exportNamespace(name: string): Promise<string>;
 }
@@ -114,25 +114,25 @@ export class HttpOkvnsApi implements OkvnsApi {
     );
   }
 
-  async importMarkdown(markdown: string): Promise<NamespaceDto[]> {
-    const result = await this.request<{ namespaces: NamespaceDto[] }>('/markdown/import', {
+  async importYaml(yaml: string): Promise<NamespaceDto[]> {
+    const result = await this.request<{ namespaces: NamespaceDto[] }>('/yaml/import', {
       method: 'POST',
       headers: JSON_HEADERS,
-      body: JSON.stringify({ markdown }),
+      body: JSON.stringify({ yaml }),
     });
     return result.namespaces;
   }
 
   async exportAll(): Promise<string> {
-    const result = await this.request<{ markdown: string }>('/markdown/export');
-    return result.markdown;
+    const result = await this.request<{ yaml: string }>('/yaml/export');
+    return result.yaml;
   }
 
   async exportNamespace(name: string): Promise<string> {
-    const result = await this.request<{ markdown: string }>(
-      `/markdown/export/${encodeURIComponent(name)}`,
+    const result = await this.request<{ yaml: string }>(
+      `/yaml/export/${encodeURIComponent(name)}`,
     );
-    return result.markdown;
+    return result.yaml;
   }
 }
 

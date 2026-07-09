@@ -12,7 +12,7 @@ const PLACEHOLDER = `namespaces:
 
 export function ImportPage() {
   const api = useApi();
-  const [markdown, setMarkdown] = useState('');
+  const [yaml, setYaml] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [imported, setImported] = useState<NamespaceDto[] | null>(null);
 
@@ -20,7 +20,7 @@ export function ImportPage() {
     event.preventDefault();
     setError(null);
     try {
-      const namespaces = await api.importMarkdown(markdown);
+      const namespaces = await api.importYaml(yaml);
       setImported(namespaces);
     } catch (err) {
       // Keep the submitted content available for correction.
@@ -31,15 +31,15 @@ export function ImportPage() {
 
   return (
     <section>
-      <h1>Import markdown</h1>
-      <form onSubmit={onImport} aria-label="Import markdown">
-        <label htmlFor="import-markdown">Markdown</label>
+      <h1>Import YAML</h1>
+      <form onSubmit={onImport} aria-label="Import YAML">
+        <label htmlFor="import-yaml">YAML</label>
         <textarea
-          id="import-markdown"
+          id="import-yaml"
           rows={12}
           placeholder={PLACEHOLDER}
-          value={markdown}
-          onChange={(event) => setMarkdown(event.target.value)}
+          value={yaml}
+          onChange={(event) => setYaml(event.target.value)}
         />
         <button type="submit">Import</button>
       </form>

@@ -1,4 +1,4 @@
-# ADR-0004: Use a Strict OKVNS Markdown Contract
+# ADR-0004: Use a Strict OKVNS YAML Contract
 
 ## Status
 
@@ -6,13 +6,13 @@ Accepted
 
 ## Context
 
-OKVNS supports bulk import and export through markdown containing YAML. Imports mutate namespace state, so invalid input must be rejected before any storage changes occur.
+OKVNS supports bulk import and export through raw YAML. Imports mutate namespace state, so invalid input must be rejected before any storage changes occur.
 
 The project also needs compatibility with the original single-namespace shape while making the canonical multi-namespace shape clear.
 
 ## Decision
 
-Use a strict markdown/YAML contract.
+Use a strict YAML contract exposed through `/yaml/*` routes with `yaml` request/response fields. Export emits raw YAML, not a markdown code fence.
 
 The canonical export shape is:
 

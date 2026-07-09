@@ -6,10 +6,10 @@ import {
   type EntryDto,
   type NamespaceDto,
 } from '@okvns/shared';
-import { MarkdownError } from './errors.js';
+import { YamlError } from './errors.js';
 
-const invalid = (message: string): MarkdownError =>
-  new MarkdownError(ERROR_CODES.INVALID_MARKDOWN, message);
+const invalid = (message: string): YamlError =>
+  new YamlError(ERROR_CODES.INVALID_YAML, message);
 
 const byteLength = (text: string): number => new TextEncoder().encode(text).length;
 
@@ -17,17 +17,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Extracts the body of a leading ```yaml fence, or returns the text unchanged. */
-function extractYaml(markdown: string): string {
-  const match = markdown.match(/```(?:ya?ml)?\s*\n([\s\S]*?)```/i);
-  return match ? match[1] : markdown;
-}
-
 function safeParseYaml(text: string): unknown {
   try {
     return parseYaml(text, { maxAliasCount: 100 });
   } catch {
-    throw invalid('Markdown content is not valid YAML.');
+    throw invalid('Content is not valid YAML.');
   }
 }
 
@@ -65,7 +59,7 @@ function parseEntries(raw: unknown, namespaceName: string): EntryDto[] {
       throw invalid(`Entry "${name}" must have a string value.`);
     }
     if (seen.has(name)) {
-      throw new MarkdownError(
+      throw new YamlError(
         ERROR_CODES.DUPLICATE_ENTRY,
         `Duplicate entry "${name}" in namespace "${namespaceName}".`,
       );
@@ -77,18 +71,18 @@ function parseEntries(raw: unknown, namespaceName: string): EntryDto[] {
 }
 
 /**
- * Parses OKVNS markdown into normalized namespace DTOs. Validates the entire
+ * Parses OKVNS YAML into normalized namespace DTOs. Validates the entire
  * document — allowlisted keys, shapes, sizes, and duplicates — before returning,
  * so callers can treat a successful parse as safe to apply atomically.
  */
-export function parseNamespacesMarkdown(markdown: string): NamespaceDto[] {
-  if (byteLength(markdown) > REQUEST_BODY_MAX_BYTES) {
-    throw invalid('Markdown payload exceeds the maximum allowed size.');
+export function parseNamespacesYaml(yaml: string): NamespaceDto[] {
+  if (byteLength(yaml) > REQUEST_BODY_MAX_BYTES) {
+    throw invalid('YAML payload exceeds the maximum allowed size.');
   }
 
-  const root = safeParseYaml(extractYaml(markdown));
+  const root = safeParseYaml(yaml);
   if (!isRecord(root)) {
-    throw invalid('Markdown must contain a "namespaces" array or a "namespace" object.');
+    throw invalid('YAML must contain a "namespaces" array or a "namespace" object.');
   }
 
   const hasMany = Object.prototype.hasOwnProperty.call(root, 'namespaces');
@@ -125,9 +119,9 @@ export function parseNamespacesMarkdown(markdown: string): NamespaceDto[] {
     }
     const name = normalizeName(item.name, 'Namespace name is missing or invalid.');
     if (seen.has(name)) {
-      throw new MarkdownError(
+      throw new YamlError(
         ERROR_CODES.DUPLICATE_NAMESPACE,
-        `Duplicate namespace "${name}" in imported markdown.`,
+        `Duplicate namespace "${name}" in imported YAML.`,
       );
     }
     seen.add(name);

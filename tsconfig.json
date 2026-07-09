@@ -4,7 +4,7 @@
     { "path": "./packages/shared" },
     { "path": "./packages/domain" },
     { "path": "./packages/application" },
-    { "path": "./packages/markdown" },
+    { "path": "./packages/yaml" },
     { "path": "./apps/api" },
     { "path": "./apps/admin-web" }
   ]

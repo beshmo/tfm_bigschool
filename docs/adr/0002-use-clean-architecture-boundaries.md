@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The core OKVNS behavior is small but must remain independent from framework and deployment concerns. Namespace rules, entry rules, markdown behavior, and use-case orchestration should be testable without starting NestJS, React, browsers, containers, or persistence adapters.
+The core OKVNS behavior is small but must remain independent from framework and deployment concerns. Namespace rules, entry rules, YAML behavior, and use-case orchestration should be testable without starting NestJS, React, browsers, containers, or persistence adapters.
 
 ## Decision
 

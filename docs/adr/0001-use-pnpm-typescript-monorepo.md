@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-OKVNS includes domain logic, application use cases, markdown parsing, a REST API, and an admin frontend. These parts must share stable types while keeping clear ownership boundaries.
+OKVNS includes domain logic, application use cases, YAML parsing, a REST API, and an admin frontend. These parts must share stable types while keeping clear ownership boundaries.
 
 The project also needs consistent scripts for build, lint, unit tests, coverage, and E2E workflows.
 
@@ -19,7 +19,7 @@ The workspace contains:
 - `packages/shared` for framework-independent shared types and helpers.
 - `packages/domain` for entities, value objects, invariants, and business errors.
 - `packages/application` for use cases and repository ports.
-- `packages/markdown` for OKVNS markdown parsing and serialization.
+- `packages/yaml` for OKVNS YAML parsing and serialization.
 - `apps/api` for the NestJS REST API.
 - `apps/admin-web` for the React/Vite admin frontend.
 

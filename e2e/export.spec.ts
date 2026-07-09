@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 const nsA = `e2e-export-a-${Date.now()}`;
 const nsB = `e2e-export-b-${Date.now()}`;
 
-test('export markdown for all namespaces and for a selected namespace', async ({ page }) => {
+test('export YAML for all namespaces and for a selected namespace', async ({ page }) => {
   // Seed two namespaces.
   await page.goto('/');
   for (const name of [nsA, nsB]) {
@@ -16,14 +16,14 @@ test('export markdown for all namespaces and for a selected namespace', async ({
 
   // Export all
   await page.getByRole('button', { name: 'Export all namespaces' }).click();
-  const all = page.getByLabel('Exported markdown');
+  const all = page.getByLabel('Exported YAML');
   await expect(all).toContainText(nsA);
   await expect(all).toContainText(nsB);
 
   // Export a selected namespace only
   await page.getByLabel('Namespace', { exact: true }).selectOption(nsA);
   await page.getByRole('button', { name: 'Export selected namespace' }).click();
-  const one = page.getByLabel('Exported markdown');
+  const one = page.getByLabel('Exported YAML');
   await expect(one).toContainText(nsA);
   await expect(one).not.toContainText(nsB);
 });

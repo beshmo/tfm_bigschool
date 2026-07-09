@@ -3,7 +3,7 @@ import { ERROR_CODES, type ApiErrorDto, type ErrorCode } from '@okvns/shared';
 /** HTTP status for each stable OKVNS error code. */
 export const STATUS_BY_CODE: Record<ErrorCode, number> = {
   [ERROR_CODES.VALIDATION]: 400,
-  [ERROR_CODES.INVALID_MARKDOWN]: 400,
+  [ERROR_CODES.INVALID_YAML]: 400,
   [ERROR_CODES.DUPLICATE_NAMESPACE]: 409,
   [ERROR_CODES.DUPLICATE_ENTRY]: 409,
   [ERROR_CODES.NAMESPACE_NOT_FOUND]: 404,

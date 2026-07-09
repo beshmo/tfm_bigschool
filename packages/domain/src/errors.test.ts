@@ -6,7 +6,7 @@ import {
   DuplicateNamespaceError,
   EntryNotFoundError,
   InvalidEntryValueError,
-  InvalidMarkdownError,
+  InvalidYamlError,
   InvalidResourceNameError,
   NamespaceNotFoundError,
 } from './errors.js';
@@ -27,7 +27,7 @@ describe('domain errors', () => {
     expect(new DuplicateEntryError('ns', 'e').code).toBe(ERROR_CODES.DUPLICATE_ENTRY);
     expect(new NamespaceNotFoundError('ns').code).toBe(ERROR_CODES.NAMESPACE_NOT_FOUND);
     expect(new EntryNotFoundError('ns', 'e').code).toBe(ERROR_CODES.ENTRY_NOT_FOUND);
-    expect(new InvalidMarkdownError('bad').code).toBe(ERROR_CODES.INVALID_MARKDOWN);
+    expect(new InvalidYamlError('bad').code).toBe(ERROR_CODES.INVALID_YAML);
   });
 
   it('carries contextual fields for mapping', () => {
@@ -40,8 +40,8 @@ describe('domain errors', () => {
     expect([missing.namespaceName, missing.entryName]).toEqual(['ns', 'e']);
   });
 
-  it('GIVEN an InvalidMarkdownError WHEN created THEN details default to empty and are carried', () => {
-    expect(new InvalidMarkdownError('bad').details).toEqual([]);
-    expect(new InvalidMarkdownError('bad', ['line 1']).details).toEqual(['line 1']);
+  it('GIVEN an InvalidYamlError WHEN created THEN details default to empty and are carried', () => {
+    expect(new InvalidYamlError('bad').details).toEqual([]);
+    expect(new InvalidYamlError('bad', ['line 1']).details).toEqual(['line 1']);
   });
 });

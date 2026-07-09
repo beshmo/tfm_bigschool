@@ -67,8 +67,8 @@ export class EntryNotFoundError extends DomainError {
   }
 }
 
-export class InvalidMarkdownError extends DomainError {
-  readonly code = ERROR_CODES.INVALID_MARKDOWN;
+export class InvalidYamlError extends DomainError {
+  readonly code = ERROR_CODES.INVALID_YAML;
 
   constructor(
     message: string,
