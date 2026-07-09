@@ -125,7 +125,11 @@ export function NamespaceDetailPage() {
         <button type="submit">Rename</button>
       </form>
 
-      <button type="button" aria-label={`Delete namespace ${namespace.name}`} onClick={onDeleteNamespace}>
+      <button
+        type="button"
+        aria-label={`Delete namespace ${namespace.name}`}
+        onClick={onDeleteNamespace}
+      >
         Delete namespace
       </button>
 
@@ -134,7 +138,11 @@ export function NamespaceDetailPage() {
         <label htmlFor="entry-name">Entry name</label>
         <input id="entry-name" value={entryName} onChange={(e) => setEntryName(e.target.value)} />
         <label htmlFor="entry-value">Entry value</label>
-        <input id="entry-value" value={entryValue} onChange={(e) => setEntryValue(e.target.value)} />
+        <input
+          id="entry-value"
+          value={entryValue}
+          onChange={(e) => setEntryValue(e.target.value)}
+        />
         <button type="submit">Add entry</button>
       </form>
 
@@ -144,7 +152,10 @@ export function NamespaceDetailPage() {
         <ul>
           {namespace.entries.map((entry) => (
             <li key={entry.name}>
-              <form aria-label={`Edit entry ${entry.name}`} onSubmit={(e) => onSaveValue(e, entry.name)}>
+              <form
+                aria-label={`Edit entry ${entry.name}`}
+                onSubmit={(e) => onSaveValue(e, entry.name)}
+              >
                 <span>{entry.name}</span>
                 <input
                   name="value"

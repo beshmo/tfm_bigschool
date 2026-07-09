@@ -40,7 +40,9 @@ describe('CreateEntryUseCase', () => {
   it('GIVEN a duplicate entry WHEN created THEN it throws DuplicateEntryError', async () => {
     const useCase = new CreateEntryUseCase(repository);
     await useCase.execute('users', 'admin', 'v');
-    await expect(useCase.execute('users', 'admin', 'v2')).rejects.toBeInstanceOf(DuplicateEntryError);
+    await expect(useCase.execute('users', 'admin', 'v2')).rejects.toBeInstanceOf(
+      DuplicateEntryError,
+    );
   });
 
   it('GIVEN an invalid entry name WHEN created THEN it throws a validation error', async () => {
@@ -76,15 +78,15 @@ describe('GetEntryUseCase', () => {
   });
 
   it('GIVEN a missing namespace WHEN retrieved THEN it throws NamespaceNotFoundError', async () => {
-    await expect(new GetEntryUseCase(repository).execute('missing', 'admin')).rejects.toBeInstanceOf(
-      NamespaceNotFoundError,
-    );
+    await expect(
+      new GetEntryUseCase(repository).execute('missing', 'admin'),
+    ).rejects.toBeInstanceOf(NamespaceNotFoundError);
   });
 
   it('GIVEN a missing entry WHEN retrieved THEN it throws EntryNotFoundError', async () => {
-    await expect(new GetEntryUseCase(repository).execute('users', 'missing')).rejects.toBeInstanceOf(
-      EntryNotFoundError,
-    );
+    await expect(
+      new GetEntryUseCase(repository).execute('users', 'missing'),
+    ).rejects.toBeInstanceOf(EntryNotFoundError);
   });
 });
 
@@ -94,12 +96,16 @@ describe('UpdateEntryUseCase', () => {
   });
 
   it('GIVEN a value-only change WHEN updated THEN the value changes and name is kept', async () => {
-    const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', { value: 'new' });
+    const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', {
+      value: 'new',
+    });
     expect(dto).toEqual({ name: 'admin', value: 'new' });
   });
 
   it('GIVEN a name-only change WHEN updated THEN the entry is re-keyed and value is kept', async () => {
-    const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', { name: 'root' });
+    const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', {
+      name: 'root',
+    });
     expect(dto).toEqual({ name: 'root', value: 'original' });
   });
 
@@ -140,14 +146,14 @@ describe('DeleteEntryUseCase', () => {
   });
 
   it('GIVEN a missing namespace WHEN deleted THEN it throws NamespaceNotFoundError', async () => {
-    await expect(new DeleteEntryUseCase(repository).execute('missing', 'admin')).rejects.toBeInstanceOf(
-      NamespaceNotFoundError,
-    );
+    await expect(
+      new DeleteEntryUseCase(repository).execute('missing', 'admin'),
+    ).rejects.toBeInstanceOf(NamespaceNotFoundError);
   });
 
   it('GIVEN a missing entry WHEN deleted THEN it throws EntryNotFoundError', async () => {
-    await expect(new DeleteEntryUseCase(repository).execute('users', 'missing')).rejects.toBeInstanceOf(
-      EntryNotFoundError,
-    );
+    await expect(
+      new DeleteEntryUseCase(repository).execute('users', 'missing'),
+    ).rejects.toBeInstanceOf(EntryNotFoundError);
   });
 });

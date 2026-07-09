@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ExportYamlUseCase,
@@ -14,10 +6,7 @@ import {
   ImportYamlUseCase,
 } from '@okvns/application';
 import { REQUEST_BODY_MAX_BYTES } from '@okvns/shared';
-import type {
-  YamlExportResponseDto,
-  YamlImportResponseDto,
-} from '@okvns/shared';
+import type { YamlExportResponseDto, YamlImportResponseDto } from '@okvns/shared';
 import { NameParamPipe } from '../common/name-param.pipe';
 import { YamlImportDto, type UploadedYamlFile } from './yaml.dto';
 
@@ -38,14 +27,12 @@ export class YamlController {
    * missing, or invalid content as `INVALID_YAML`.
    */
   @Post('import')
-  @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: REQUEST_BODY_MAX_BYTES } }),
-  )
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: REQUEST_BODY_MAX_BYTES } }))
   async import(
     @UploadedFile() file: UploadedYamlFile | undefined,
     @Body() body: YamlImportDto,
   ): Promise<YamlImportResponseDto> {
-    const yaml = file ? file.buffer.toString('utf8') : body.yaml ?? '';
+    const yaml = file ? file.buffer.toString('utf8') : (body.yaml ?? '');
     const namespaces = await this.importYaml.execute(yaml);
     return { namespaces };
   }

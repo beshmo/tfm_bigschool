@@ -22,4 +22,3 @@ Services write logs to stdout/stderr, expose network ports, and use health/readi
 - Runtime configuration stays outside the image.
 - Stateless replicas are straightforward, but each API process has independent in-memory state.
 - Persistent volumes, databases, queues, Redis, and Secrets are intentionally excluded from the MVP.
-

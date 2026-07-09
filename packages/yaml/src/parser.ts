@@ -8,8 +8,7 @@ import {
 } from '@okvns/shared';
 import { YamlError } from './errors.js';
 
-const invalid = (message: string): YamlError =>
-  new YamlError(ERROR_CODES.INVALID_YAML, message);
+const invalid = (message: string): YamlError => new YamlError(ERROR_CODES.INVALID_YAML, message);
 
 const byteLength = (text: string): number => new TextEncoder().encode(text).length;
 

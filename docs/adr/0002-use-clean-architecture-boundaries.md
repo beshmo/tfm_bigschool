@@ -25,4 +25,3 @@ Dependency direction is:
 - Persistence can be replaced later without rewriting use cases.
 - Controllers and React components stay focused on transport and UI mapping.
 - Additional abstractions must remain justified by a real boundary or testability need.
-

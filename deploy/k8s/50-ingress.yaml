@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/part-of: okvns
   annotations:
     # kubernetes.io/ingress.class: nginx
-    okvns.dev/placeholder: "true"
+    okvns.dev/placeholder: 'true'
 spec:
   rules:
     - host: okvns.example.com

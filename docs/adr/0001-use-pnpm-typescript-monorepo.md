@@ -29,4 +29,3 @@ The workspace contains:
 - Package boundaries remain explicit through workspace dependencies.
 - Root commands can run repository-wide checks.
 - Changes that cross packages require care to preserve dependency direction and avoid accidental coupling.
-

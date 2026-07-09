@@ -14,9 +14,9 @@ docker compose up --build
 
 Services:
 
-| Service | URL |
-| --- | --- |
-| API | `http://localhost:3000` |
+| Service   | URL                     |
+| --------- | ----------------------- |
+| API       | `http://localhost:3000` |
 | Admin web | `http://localhost:8080` |
 
 The Compose file starts one API container and one admin frontend container. It does not start databases, Redis, queues, persistent volumes, or secrets.

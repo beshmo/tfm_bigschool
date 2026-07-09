@@ -34,4 +34,3 @@ The importer validates the full document before mutating storage and rejects une
 - Exported documents have one stable canonical shape.
 - Compatibility exists for the legacy single-namespace shape.
 - The parser must keep validation strict and well covered by tests.
-

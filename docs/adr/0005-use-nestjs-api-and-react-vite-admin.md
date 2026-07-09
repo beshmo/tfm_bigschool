@@ -22,4 +22,3 @@ The API exposes REST endpoints for health, readiness, namespace CRUD, entry CRUD
 - React/Vite provides fast local frontend development and focused component tests.
 - API client mapping stays isolated from React components.
 - API contract changes must update backend tests, frontend client tests, and documentation together.
-

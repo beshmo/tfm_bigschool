@@ -88,7 +88,9 @@ describe('UpdateNamespaceUseCase', () => {
     const useCase = new UpdateNamespaceUseCase(repository);
     await repository.save(Namespace.create('users'));
     await repository.save(Namespace.create('people'));
-    await expect(useCase.execute('users', 'people')).rejects.toBeInstanceOf(DuplicateNamespaceError);
+    await expect(useCase.execute('users', 'people')).rejects.toBeInstanceOf(
+      DuplicateNamespaceError,
+    );
   });
 
   it('GIVEN a missing namespace WHEN renamed THEN it throws NamespaceNotFoundError', async () => {

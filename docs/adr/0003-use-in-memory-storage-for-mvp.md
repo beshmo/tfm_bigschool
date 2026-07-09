@@ -20,4 +20,3 @@ State lives in the API process and is lost when the process or pod restarts. The
 - Deployments are stateless and easy to restart.
 - The product must not imply data durability.
 - Any future persistent storage requires a new design/spec change and new adapter-level tests.
-

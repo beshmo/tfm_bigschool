@@ -50,9 +50,11 @@ Layers, strictly one-directional (`shared` ← `domain` ← `application` → `y
 - `apps/admin-web` — React. **API request/response mapping is isolated** in `src/api/` (`HttpOkvnsApi` implements the `OkvnsApi` port); components consume it through `useApi()` context and never touch `fetch`/status codes directly.
 
 ### Error handling contract
+
 Every error surfaces as a safe shape `{ error: { code, message, details? } }` with **no stack traces**. `apps/api/src/common/domain-exception.filter.ts` maps `DomainError`, `YamlError`, and Nest `HttpException` to this shape; `STATUS_BY_CODE` in `common/api-error.ts` is the single source of truth for code→HTTP-status. When adding a new error, add its code in `shared`, its status in `STATUS_BY_CODE`, and cover it in the API contract tests.
 
 ### YAML import semantics
+
 Import validates the **entire** document before mutating anything (atomic) and **upserts by namespace name** — an existing namespace's entries are fully replaced. Canonical/export shape is `namespaces: [...]`; the single `namespace: {...}` shape is accepted only on import. Export emits raw YAML (no markdown code fence). `ImportYamlUseCase` builds fresh aggregates before any `repository.save`, so a mid-document failure leaves storage untouched — preserve that ordering.
 
 ## Critical gotchas (learned the hard way)

@@ -2,23 +2,23 @@
 
 ## API Endpoints
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/health` | Liveness probe. |
-| GET | `/ready` | Readiness probe. |
-| GET | `/namespaces` | List namespaces. |
-| POST | `/namespaces` | Create a namespace (`{ "name": "..." }`). |
-| GET | `/namespaces/:name` | Get a namespace with its entries. |
-| PUT | `/namespaces/:name` | Rename a namespace (`{ "name": "..." }`). |
-| DELETE | `/namespaces/:name` | Delete a namespace. |
-| GET | `/namespaces/:name/entries` | List entries in a namespace. |
-| POST | `/namespaces/:name/entries` | Create an entry (`{ "name": "...", "value": "..." }`). |
-| GET | `/namespaces/:name/entries/:entry` | Get an entry. |
-| PUT | `/namespaces/:name/entries/:entry` | Update an entry (`{ "name"?, "value"? }`). |
-| DELETE | `/namespaces/:name/entries/:entry` | Delete an entry. |
-| POST | `/yaml/import` | Import YAML (`{ "yaml": "..." }` JSON, or multipart file field `file`). |
-| GET | `/yaml/export` | Export all namespaces as YAML (`{ "yaml": "..." }`). |
-| GET | `/yaml/export/:name` | Export a single namespace as YAML (`{ "yaml": "..." }`). |
+| Method | Path                               | Purpose                                                                 |
+| ------ | ---------------------------------- | ----------------------------------------------------------------------- |
+| GET    | `/health`                          | Liveness probe.                                                         |
+| GET    | `/ready`                           | Readiness probe.                                                        |
+| GET    | `/namespaces`                      | List namespaces.                                                        |
+| POST   | `/namespaces`                      | Create a namespace (`{ "name": "..." }`).                               |
+| GET    | `/namespaces/:name`                | Get a namespace with its entries.                                       |
+| PUT    | `/namespaces/:name`                | Rename a namespace (`{ "name": "..." }`).                               |
+| DELETE | `/namespaces/:name`                | Delete a namespace.                                                     |
+| GET    | `/namespaces/:name/entries`        | List entries in a namespace.                                            |
+| POST   | `/namespaces/:name/entries`        | Create an entry (`{ "name": "...", "value": "..." }`).                  |
+| GET    | `/namespaces/:name/entries/:entry` | Get an entry.                                                           |
+| PUT    | `/namespaces/:name/entries/:entry` | Update an entry (`{ "name"?, "value"? }`).                              |
+| DELETE | `/namespaces/:name/entries/:entry` | Delete an entry.                                                        |
+| POST   | `/yaml/import`                     | Import YAML (`{ "yaml": "..." }` JSON, or multipart file field `file`). |
+| GET    | `/yaml/export`                     | Export all namespaces as YAML (`{ "yaml": "..." }`).                    |
+| GET    | `/yaml/export/:name`               | Export a single namespace as YAML (`{ "yaml": "..." }`).                |
 
 ## Names
 
@@ -101,14 +101,14 @@ Export always returns raw YAML using the canonical `namespaces` array shape and 
 
 This bulk import/export contract replaces the previous markdown contract. The change is breaking:
 
-| Before (markdown) | After (YAML) |
-| --- | --- |
-| `POST /markdown/import` | `POST /yaml/import` |
-| `GET /markdown/export` | `GET /yaml/export` |
-| `GET /markdown/export/:name` | `GET /yaml/export/:name` |
-| Request field `{ "markdown": "..." }` | Request field `{ "yaml": "..." }` |
-| Response field `{ "markdown": "..." }` | Response field `{ "yaml": "..." }` |
-| Export wrapped in a ```` ```yaml ```` code fence | Raw YAML, no code fence |
-| Error code `INVALID_MARKDOWN` | Error code `INVALID_YAML` |
+| Before (markdown)                          | After (YAML)                       |
+| ------------------------------------------ | ---------------------------------- |
+| `POST /markdown/import`                    | `POST /yaml/import`                |
+| `GET /markdown/export`                     | `GET /yaml/export`                 |
+| `GET /markdown/export/:name`               | `GET /yaml/export/:name`           |
+| Request field `{ "markdown": "..." }`      | Request field `{ "yaml": "..." }`  |
+| Response field `{ "markdown": "..." }`     | Response field `{ "yaml": "..." }` |
+| Export wrapped in a ` ```yaml ` code fence | Raw YAML, no code fence            |
+| Error code `INVALID_MARKDOWN`              | Error code `INVALID_YAML`          |
 
 Clients must switch to the `/yaml/*` routes, send and read the `yaml` field, stop parsing fenced output, and handle `INVALID_YAML` instead of `INVALID_MARKDOWN`.

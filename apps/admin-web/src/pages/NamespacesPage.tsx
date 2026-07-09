@@ -54,11 +54,7 @@ export function NamespacesPage() {
 
       <form onSubmit={onCreate} aria-label="Create namespace">
         <label htmlFor="namespace-name">Namespace name</label>
-        <input
-          id="namespace-name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
+        <input id="namespace-name" value={name} onChange={(event) => setName(event.target.value)} />
         <button type="submit">Create namespace</button>
       </form>
 
@@ -72,9 +68,7 @@ export function NamespacesPage() {
         <ul>
           {namespaces.map((namespace) => (
             <li key={namespace.name}>
-              <Link to={`/namespaces/${encodeURIComponent(namespace.name)}`}>
-                {namespace.name}
-              </Link>
+              <Link to={`/namespaces/${encodeURIComponent(namespace.name)}`}>{namespace.name}</Link>
               <button
                 type="button"
                 aria-label={`Delete namespace ${namespace.name}`}

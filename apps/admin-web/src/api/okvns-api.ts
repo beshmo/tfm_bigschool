@@ -142,9 +142,7 @@ export class HttpOkvnsApi implements OkvnsApi {
   }
 
   async exportNamespace(name: string): Promise<string> {
-    const result = await this.request<{ yaml: string }>(
-      `/yaml/export/${encodeURIComponent(name)}`,
-    );
+    const result = await this.request<{ yaml: string }>(`/yaml/export/${encodeURIComponent(name)}`);
     return result.yaml;
   }
 }

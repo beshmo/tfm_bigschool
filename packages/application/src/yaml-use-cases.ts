@@ -15,7 +15,9 @@ export class ImportYamlUseCase {
     const parsed = parseNamespacesYaml(yaml);
     const built = parsed.map((namespaceDto) => {
       const namespace = Namespace.create(namespaceDto.name);
-      namespace.setEntries(namespaceDto.entries.map((entry) => Entry.create(entry.name, entry.value)));
+      namespace.setEntries(
+        namespaceDto.entries.map((entry) => Entry.create(entry.name, entry.value)),
+      );
       return namespace;
     });
     for (const namespace of built) {

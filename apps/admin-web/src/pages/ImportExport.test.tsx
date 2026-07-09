@@ -10,10 +10,7 @@ describe('ImportPage', () => {
     api.seed([{ name: 'users', entries: [] }]);
     renderApp(api, '/import');
 
-    await userEvent.type(
-      await screen.findByLabelText('YAML'),
-      'namespace: users',
-    );
+    await userEvent.type(await screen.findByLabelText('YAML'), 'namespace: users');
     await userEvent.click(screen.getByRole('button', { name: 'Import' }));
 
     expect(await screen.findByRole('heading', { name: 'Imported namespaces' })).toBeInTheDocument();

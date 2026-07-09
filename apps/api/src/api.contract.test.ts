@@ -117,7 +117,9 @@ describe('Entry endpoints', () => {
   });
 
   it('POST creates an entry', async () => {
-    const res = await http.post('/namespaces/users/entries').send({ name: 'admin', value: 'secret' });
+    const res = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'secret' });
     expect(res.status).toBe(201);
     expect(res.body).toEqual({ name: 'admin', value: 'secret' });
   });
@@ -201,12 +203,10 @@ describe('YAML endpoints', () => {
         value: secret
   - name: settings
     entries: []`;
-    const res = await http
-      .post('/yaml/import')
-      .attach('file', Buffer.from(yaml, 'utf8'), {
-        filename: 'import.yaml',
-        contentType: 'application/x-yaml',
-      });
+    const res = await http.post('/yaml/import').attach('file', Buffer.from(yaml, 'utf8'), {
+      filename: 'import.yaml',
+      contentType: 'application/x-yaml',
+    });
     expect(res.status).toBe(201);
     expect(res.body.namespaces.map((n: { name: string }) => n.name)).toEqual(['users', 'settings']);
   });
@@ -219,12 +219,10 @@ describe('YAML endpoints', () => {
   });
 
   it('POST /yaml/import returns 400 for an empty multipart file', async () => {
-    const res = await http
-      .post('/yaml/import')
-      .attach('file', Buffer.from('', 'utf8'), {
-        filename: 'empty.yaml',
-        contentType: 'application/x-yaml',
-      });
+    const res = await http.post('/yaml/import').attach('file', Buffer.from('', 'utf8'), {
+      filename: 'empty.yaml',
+      contentType: 'application/x-yaml',
+    });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_YAML');
     expect((await http.get('/namespaces')).body).toEqual([]);

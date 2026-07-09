@@ -46,9 +46,7 @@ describe('NamespaceDetailPage', () => {
     await userEvent.type(valueInput, 'rotated');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() =>
-      expect(screen.getByLabelText('Value for admin')).toHaveValue('rotated'),
-    );
+    await waitFor(() => expect(screen.getByLabelText('Value for admin')).toHaveValue('rotated'));
   });
 
   it('deletes an entry', async () => {

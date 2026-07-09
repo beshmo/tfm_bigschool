@@ -65,7 +65,8 @@ describe('parseNamespacesYaml', () => {
   };
 
   it('GIVEN an oversized payload WHEN parsed THEN it throws INVALID_YAML', () => {
-    const big = 'namespace:\n  name: users\n  entries:\n    - name: k\n      value: ' + 'x'.repeat(1_100_000);
+    const big =
+      'namespace:\n  name: users\n  entries:\n    - name: k\n      value: ' + 'x'.repeat(1_100_000);
     expectCode(() => parseNamespacesYaml(big), ERROR_CODES.INVALID_YAML);
   });
 
@@ -100,7 +101,10 @@ describe('parseNamespacesYaml', () => {
   });
 
   it('GIVEN a non-object namespace item WHEN parsed THEN it throws INVALID_YAML', () => {
-    expectCode(() => parseNamespacesYaml('namespaces:\n  - just-a-string'), ERROR_CODES.INVALID_YAML);
+    expectCode(
+      () => parseNamespacesYaml('namespaces:\n  - just-a-string'),
+      ERROR_CODES.INVALID_YAML,
+    );
     expectCode(() => parseNamespacesYaml('namespace: just-a-string'), ERROR_CODES.INVALID_YAML);
   });
 
@@ -114,7 +118,10 @@ describe('parseNamespacesYaml', () => {
   it('GIVEN a missing or invalid namespace name WHEN parsed THEN it throws INVALID_YAML', () => {
     expectCode(() => parseNamespacesYaml('namespace:\n  entries: []'), ERROR_CODES.INVALID_YAML);
     expectCode(() => parseNamespacesYaml('namespace:\n  name: 42'), ERROR_CODES.INVALID_YAML);
-    expectCode(() => parseNamespacesYaml('namespace:\n  name: "bad name"'), ERROR_CODES.INVALID_YAML);
+    expectCode(
+      () => parseNamespacesYaml('namespace:\n  name: "bad name"'),
+      ERROR_CODES.INVALID_YAML,
+    );
   });
 
   it('GIVEN a non-array entries value WHEN parsed THEN it throws INVALID_YAML', () => {
@@ -133,14 +140,20 @@ describe('parseNamespacesYaml', () => {
 
   it('GIVEN an unexpected entry key WHEN parsed THEN it throws INVALID_YAML', () => {
     expectCode(
-      () => parseNamespacesYaml('namespace:\n  name: a\n  entries:\n    - name: k\n      value: v\n      extra: x'),
+      () =>
+        parseNamespacesYaml(
+          'namespace:\n  name: a\n  entries:\n    - name: k\n      value: v\n      extra: x',
+        ),
       ERROR_CODES.INVALID_YAML,
     );
   });
 
   it('GIVEN an invalid entry name WHEN parsed THEN it throws INVALID_YAML', () => {
     expectCode(
-      () => parseNamespacesYaml('namespace:\n  name: a\n  entries:\n    - name: "bad name"\n      value: v'),
+      () =>
+        parseNamespacesYaml(
+          'namespace:\n  name: a\n  entries:\n    - name: "bad name"\n      value: v',
+        ),
       ERROR_CODES.INVALID_YAML,
     );
   });
@@ -151,7 +164,8 @@ describe('parseNamespacesYaml', () => {
       ERROR_CODES.INVALID_YAML,
     );
     expectCode(
-      () => parseNamespacesYaml('namespace:\n  name: a\n  entries:\n    - name: k\n      value: 42'),
+      () =>
+        parseNamespacesYaml('namespace:\n  name: a\n  entries:\n    - name: k\n      value: 42'),
       ERROR_CODES.INVALID_YAML,
     );
   });
@@ -177,7 +191,13 @@ describe('parseNamespacesYaml', () => {
 describe('serializeNamespacesYaml', () => {
   it('GIVEN namespaces WHEN serialized THEN it emits raw canonical YAML sorted by name with no code fence', () => {
     const yaml = serializeNamespacesYaml([
-      { name: 'zeta', entries: [{ name: 'b', value: '2' }, { name: 'a', value: '1' }] },
+      {
+        name: 'zeta',
+        entries: [
+          { name: 'b', value: '2' },
+          { name: 'a', value: '1' },
+        ],
+      },
       { name: 'alpha', entries: [] },
     ]);
     expect(yaml).not.toContain('```');
@@ -185,7 +205,13 @@ describe('serializeNamespacesYaml', () => {
     const roundTrip = parseNamespacesYaml(yaml);
     expect(roundTrip).toEqual([
       { name: 'alpha', entries: [] },
-      { name: 'zeta', entries: [{ name: 'a', value: '1' }, { name: 'b', value: '2' }] },
+      {
+        name: 'zeta',
+        entries: [
+          { name: 'a', value: '1' },
+          { name: 'b', value: '2' },
+        ],
+      },
     ]);
   });
 

@@ -23,9 +23,7 @@ import { InMemoryNamespaceRepository } from './infrastructure/in-memory-namespac
 import { NAMESPACE_REPOSITORY } from './infrastructure/tokens';
 
 /** Wires a use case class to a provider constructed from the repository port. */
-function useCaseProvider<T>(
-  token: new (repository: NamespaceRepository) => T,
-): Provider {
+function useCaseProvider<T>(token: new (repository: NamespaceRepository) => T): Provider {
   return {
     provide: token,
     useFactory: (repository: NamespaceRepository) => new token(repository),
@@ -34,12 +32,7 @@ function useCaseProvider<T>(
 }
 
 @Module({
-  controllers: [
-    HealthController,
-    NamespacesController,
-    EntriesController,
-    YamlController,
-  ],
+  controllers: [HealthController, NamespacesController, EntriesController, YamlController],
   providers: [
     { provide: NAMESPACE_REPOSITORY, useClass: InMemoryNamespaceRepository },
     useCaseProvider(CreateNamespaceUseCase),

@@ -7,5 +7,5 @@ metadata:
     app.kubernetes.io/name: okvns-api
     app.kubernetes.io/part-of: okvns
 data:
-  OKVNS_API_PORT: "3000"
-  OKVNS_CORS_ORIGIN: "*"
+  OKVNS_API_PORT: '3000'
+  OKVNS_CORS_ORIGIN: '*'

@@ -5,11 +5,7 @@
     "rootDir": "./src",
     "composite": true
   },
-  "references": [
-    { "path": "../shared" },
-    { "path": "../domain" },
-    { "path": "../yaml" }
-  ],
+  "references": [{ "path": "../shared" }, { "path": "../domain" }, { "path": "../yaml" }],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts", "dist", "node_modules"]
 }

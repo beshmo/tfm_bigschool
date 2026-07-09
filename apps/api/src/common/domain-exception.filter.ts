@@ -1,10 +1,4 @@
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-  Logger,
-} from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { DomainError, InvalidYamlError } from '@okvns/domain';
 import { YamlError } from '@okvns/yaml';
@@ -48,9 +42,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
       'Unhandled error',
       exception instanceof Error ? exception.stack : String(exception),
     );
-    response
-      .status(500)
-      .json(buildApiError(ERROR_CODES.INTERNAL, 'An unexpected error occurred.'));
+    response.status(500).json(buildApiError(ERROR_CODES.INTERNAL, 'An unexpected error occurred.'));
   }
 }
 

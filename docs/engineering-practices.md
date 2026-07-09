@@ -8,12 +8,12 @@ All implementation work should follow the same engineering practices across fron
 
 Business capabilities should be organized around explicit boundaries:
 
-| Layer | Responsibility |
-| --- | --- |
-| Domain | Entities, value objects, invariants, validation rules, and business errors. |
-| Application | Use cases, orchestration, ports, and transaction boundaries. |
-| Infrastructure | Runtime adapters such as repositories and framework integration. |
-| Presentation | REST controllers, React components, DTOs, request/response mapping, and UI state. |
+| Layer          | Responsibility                                                                    |
+| -------------- | --------------------------------------------------------------------------------- |
+| Domain         | Entities, value objects, invariants, validation rules, and business errors.       |
+| Application    | Use cases, orchestration, ports, and transaction boundaries.                      |
+| Infrastructure | Runtime adapters such as repositories and framework integration.                  |
+| Presentation   | REST controllers, React components, DTOs, request/response mapping, and UI state. |
 
 Rules:
 
@@ -71,14 +71,14 @@ Authentication and authorization are non-goals for the first implementation. If 
 
 Testing expectations by layer:
 
-| Layer | Target | Scope |
-| --- | --- | --- |
-| Domain unit tests | 100% | Entities, value objects, validation rules, invariants, and business errors. |
-| Application use case tests | 100% | Namespace, entry, import, export, and repository-port orchestration. |
-| YAML unit tests | 100% | Parser, serializer, schema validation, duplicate detection, atomic import input validation, and deterministic export. |
-| API contract tests | Endpoint coverage | REST request/response contracts, status codes, validation failures, duplicates, not-found cases, and safe error shapes. |
-| React component/integration tests | Key flows | Components, forms, routing, API client mapping, and validation/API error handling. |
-| Playwright E2E workflows | Critical flows | Namespace CRUD, entry CRUD, YAML import, and YAML export. |
+| Layer                             | Target            | Scope                                                                                                                   |
+| --------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Domain unit tests                 | 100%              | Entities, value objects, validation rules, invariants, and business errors.                                             |
+| Application use case tests        | 100%              | Namespace, entry, import, export, and repository-port orchestration.                                                    |
+| YAML unit tests                   | 100%              | Parser, serializer, schema validation, duplicate detection, atomic import input validation, and deterministic export.   |
+| API contract tests                | Endpoint coverage | REST request/response contracts, status codes, validation failures, duplicates, not-found cases, and safe error shapes. |
+| React component/integration tests | Key flows         | Components, forms, routing, API client mapping, and validation/API error handling.                                      |
+| Playwright E2E workflows          | Critical flows    | Namespace CRUD, entry CRUD, YAML import, and YAML export.                                                               |
 
 Coverage rules:
 

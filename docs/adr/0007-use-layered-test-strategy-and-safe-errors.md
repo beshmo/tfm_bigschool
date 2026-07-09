@@ -33,4 +33,3 @@ API errors use a safe response shape:
 - HTTP and browser behavior are covered at their boundaries.
 - Stack traces, filesystem paths, secrets, tokens, and implementation details must not leak through API responses.
 - Future features should add tests at the layer where the risk is introduced.
-
