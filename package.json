@@ -13,11 +13,18 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "lint-staged": "lint-staged",
     "test": "pnpm -r run test",
     "test:coverage": "pnpm -r run test:coverage",
     "test:e2e": "pnpm --filter @okvns/api... run build && pnpm --filter @okvns/admin-web run build:e2e && playwright test",
     "test:e2e:install": "playwright install",
-    "prepare": "husky install"
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx,jsx,json,css,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
@@ -27,6 +34,7 @@
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.3.3",
     "typescript": "^5.6.2",
     "vitest": "^2.1.2"

@@ -1,2 +1,3 @@
-pnpm lint
+npx --no-install lint-staged
+#omited: pnpm lint
 pnpm test
