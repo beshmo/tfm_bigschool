@@ -30,7 +30,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['apps/admin-web/**/*.{ts,tsx}'],
+      files: ['apps/admin-web/**/*.{ts,tsx}', 'apps/demo-web/**/*.{ts,tsx}'],
       env: { browser: true },
     },
     {

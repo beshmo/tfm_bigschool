@@ -1,0 +1,9 @@
+namespaces:
+  - name: demo
+    entries:
+      - name: body_content_usecase
+        value: "1"
+      - name: footer_copyright
+        value: My copyright 2026 OKVNS demo.
+      - name: header
+        value: my demo webapp title

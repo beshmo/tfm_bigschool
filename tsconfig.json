@@ -7,6 +7,7 @@
     { "path": "./packages/yaml" },
     { "path": "./packages/okvns-wrapper" },
     { "path": "./apps/api" },
-    { "path": "./apps/admin-web" }
+    { "path": "./apps/admin-web" },
+    { "path": "./apps/demo-web" }
   ]
 }

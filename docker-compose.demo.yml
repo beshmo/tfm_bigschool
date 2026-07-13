@@ -1,0 +1,87 @@
+# Local OKVNS demo stack: API + admin frontend + demo webapp backed by MySQL.
+#
+# Start the demo stack with:
+#   docker compose -f docker-compose.demo.yml up --build
+#
+# The demo app reads entries from the `demo` namespace through @okvns/wrapper.
+name: okvns-demo
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: 'root'
+      MYSQL_DATABASE: 'okvns'
+      MYSQL_USER: 'okvns'
+      MYSQL_PASSWORD: 'okvns'
+    volumes:
+      - okvns-demo-mysql-data:/var/lib/mysql
+    ports:
+      - '3307:3306'
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-P', '3306', '-u', 'root', '-proot']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ['node', 'scripts/migrate.mjs']
+    environment:
+      OKVNS_MYSQL_HOST: 'mysql'
+      OKVNS_MYSQL_PORT: '3306'
+      OKVNS_MYSQL_DATABASE: 'okvns'
+      OKVNS_MYSQL_USER: 'okvns'
+      OKVNS_MYSQL_PASSWORD: 'okvns'
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      OKVNS_API_PORT: '3000'
+      OKVNS_CORS_ORIGIN: '*'
+      OKVNS_STORAGE_DRIVER: 'mysql'
+      OKVNS_MYSQL_HOST: 'mysql'
+      OKVNS_MYSQL_PORT: '3306'
+      OKVNS_MYSQL_DATABASE: 'okvns'
+      OKVNS_MYSQL_USER: 'okvns'
+      OKVNS_MYSQL_PASSWORD: 'okvns'
+    ports:
+      - '3001:3000'
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: apps/admin-web/Dockerfile
+    environment:
+      OKVNS_API_BASE_URL: 'http://localhost:3001'
+    ports:
+      - '8082:8080'
+    depends_on:
+      - api
+
+  demo-web:
+    build:
+      context: .
+      dockerfile: apps/demo-web/Dockerfile
+    environment:
+      OKVNS_API_BASE_URL: 'http://localhost:3001'
+    ports:
+      - '8083:8080'
+    depends_on:
+      - api
+
+volumes:
+  okvns-demo-mysql-data:
