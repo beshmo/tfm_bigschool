@@ -1,5 +1,19 @@
 # API And YAML Reference
 
+## Generated API Documentation
+
+When the API is running, it also serves generated OpenAPI/Swagger documentation
+built from the NestJS controllers:
+
+- **Swagger UI:** `http://localhost:3000/docs` — interactive endpoint explorer.
+- **Raw OpenAPI JSON:** `http://localhost:3000/docs-json` — machine-readable
+  contract for client generation and tooling.
+
+The generated document reflects the implemented routes, request/response
+schemas, path parameters, multipart YAML upload, and the safe error shape. This
+Markdown reference remains the source of truth for YAML semantics, error codes,
+and migration notes described below.
+
 ## API Endpoints
 
 | Method | Path                               | Purpose                                                                 |

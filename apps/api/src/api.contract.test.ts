@@ -273,3 +273,52 @@ describe('YAML endpoints', () => {
     expect(res.body.error.code).toBe('NAMESPACE_NOT_FOUND');
   });
 });
+
+describe('OpenAPI document', () => {
+  it('GET /docs-json returns a valid OpenAPI document', async () => {
+    const res = await http.get('/docs-json');
+    expect(res.status).toBe(200);
+    expect(res.body.openapi).toMatch(/^3\./);
+    expect(res.body.info.title).toBe('OKVNS API');
+    expect(res.body.paths).toBeTypeOf('object');
+  });
+
+  it('documents the health, readiness, namespace, entry, and YAML paths', async () => {
+    const { body } = await http.get('/docs-json');
+    const paths = Object.keys(body.paths);
+    expect(paths).toContain('/health');
+    expect(paths).toContain('/ready');
+    expect(paths).toContain('/namespaces');
+    expect(paths).toContain('/namespaces/{name}');
+    expect(paths).toContain('/namespaces/{namespace}/entries');
+    expect(paths).toContain('/namespaces/{namespace}/entries/{name}');
+    expect(paths).toContain('/yaml/import');
+    expect(paths).toContain('/yaml/export');
+    expect(paths).toContain('/yaml/export/{namespace}');
+  });
+
+  it('documents request, response, multipart upload, and safe error schemas', async () => {
+    const { body } = await http.get('/docs-json');
+    const schemas = body.components.schemas;
+
+    // Request and response schemas.
+    expect(schemas).toHaveProperty('NamespaceInputDto');
+    expect(schemas).toHaveProperty('NamespaceResponse');
+    expect(schemas).toHaveProperty('CreateEntryDto');
+    expect(schemas).toHaveProperty('EntryResponse');
+    expect(schemas).toHaveProperty('YamlImportResponse');
+    expect(schemas).toHaveProperty('YamlExportResponse');
+
+    // Safe error shape (no stack traces).
+    expect(schemas).toHaveProperty('ApiErrorResponse');
+    expect(schemas.ApiErrorBody.properties).toHaveProperty('code');
+    expect(schemas.ApiErrorBody.properties).not.toHaveProperty('stack');
+    const notFound = body.paths['/namespaces/{name}'].get.responses['404'];
+    expect(notFound.content['application/json'].schema.$ref).toContain('ApiErrorResponse');
+
+    // Multipart file upload on YAML import.
+    const importOp = body.paths['/yaml/import'].post;
+    expect(Object.keys(importOp.requestBody.content)).toContain('multipart/form-data');
+    expect(schemas.YamlImportFileDto.properties.file.format).toBe('binary');
+  });
+});
