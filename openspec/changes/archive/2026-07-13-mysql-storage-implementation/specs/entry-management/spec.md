@@ -1,8 +1,4 @@
-## Purpose
-
-Entry CRUD operations scoped to a namespace, exposed through the REST API and admin frontend. Covers creation, listing, retrieval, update, and deletion with validated inputs and safe error responses.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Entry creation within namespace
 The system SHALL allow API clients and admin users to create an entry with a valid unique name inside an existing namespace, storing the entry in durable storage.
@@ -18,24 +14,6 @@ The system SHALL allow API clients and admin users to create an entry with a val
 #### Scenario: Create entry in missing namespace is rejected
 - **WHEN** a client creates an entry for a namespace that does not exist
 - **THEN** the system returns a safe namespace not-found error
-
-### Requirement: Entry listing within namespace
-The system SHALL allow API clients and admin users to list entries for a namespace.
-
-#### Scenario: List entries returns namespace entries
-- **WHEN** a namespace contains entries
-- **THEN** the system returns that namespace's entries in a deterministic order
-
-### Requirement: Entry retrieval within namespace
-The system SHALL allow API clients and admin users to retrieve an entry by namespace name and entry name.
-
-#### Scenario: Existing entry is returned
-- **WHEN** a client requests an existing entry in an existing namespace
-- **THEN** the system returns that entry
-
-#### Scenario: Missing entry returns not found
-- **WHEN** a client requests an entry that does not exist in the namespace
-- **THEN** the system returns a safe entry not-found error
 
 ### Requirement: Entry update within namespace
 The system SHALL allow API clients and admin users to update an entry name, value, or both within an existing namespace, committing the update to durable storage.
@@ -63,9 +41,3 @@ The system SHALL allow API clients and admin users to delete an entry from a nam
 - **WHEN** a client deletes an entry that does not exist in the namespace
 - **THEN** the system returns a safe entry not-found error
 
-### Requirement: Entry API contract
-The API SHALL expose entry endpoints with validated DTOs, safe error response shapes, and no stack traces or implementation details in responses.
-
-#### Scenario: Invalid entry request is rejected at boundary
-- **WHEN** a client sends an invalid entry request body or route parameter
-- **THEN** the API returns a validation error before executing the use case

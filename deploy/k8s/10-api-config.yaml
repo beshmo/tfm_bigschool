@@ -9,3 +9,8 @@ metadata:
 data:
   OKVNS_API_PORT: '3000'
   OKVNS_CORS_ORIGIN: '*'
+  OKVNS_STORAGE_DRIVER: 'mysql'
+  # Non-sensitive MySQL connection settings; credentials come from the Secret.
+  OKVNS_MYSQL_HOST: 'okvns-mysql'
+  OKVNS_MYSQL_PORT: '3306'
+  OKVNS_MYSQL_DATABASE: 'okvns'

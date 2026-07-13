@@ -4,20 +4,29 @@ OKVNS is a pnpm monorepo built along clean-architecture boundaries.
 
 ## Workspace Layout
 
-| Path                   | Role                                                      |
-| ---------------------- | --------------------------------------------------------- |
-| `packages/shared`      | Framework-independent types, constants, and helpers.      |
-| `packages/domain`      | Entities, value objects, invariants, and business errors. |
-| `packages/application` | Use cases and repository ports.                           |
-| `packages/yaml`        | Strict OKVNS YAML parser and serializer.                  |
-| `apps/api`             | NestJS REST API and in-memory repository adapter.         |
-| `apps/admin-web`       | React + Vite admin frontend.                              |
+| Path                   | Role                                                       |
+| ---------------------- | ---------------------------------------------------------- |
+| `packages/shared`      | Framework-independent types, constants, and helpers.       |
+| `packages/domain`      | Entities, value objects, invariants, and business errors.  |
+| `packages/application` | Use cases and repository ports.                            |
+| `packages/yaml`        | Strict OKVNS YAML parser and serializer.                   |
+| `apps/api`             | NestJS REST API, MySQL repository adapter, and migrations. |
+| `apps/admin-web`       | React + Vite admin frontend.                               |
 
 ## Storage Model
 
-Storage is in-memory only. All namespaces and entries live in the API process and are lost on restart.
+Namespaces and entries are stored durably in **MySQL** and survive API restarts
+and pod replacement. The schema is two relational tables — `namespaces` and
+`entries` — with a unique namespace name, a unique `(namespace_id, entry_name)`,
+and `ON DELETE CASCADE` from namespace to entries. Multi-step mutations
+(namespace rename, multi-namespace YAML import) run inside a single MySQL
+transaction. See [ADR-0008](adr/0008-use-mysql-for-durable-storage.md).
 
-The first implementation intentionally has no database, Redis, queue, filesystem-backed persistence, persistent volume, authentication, or authorization.
+MySQL types stay inside the `apps/api` infrastructure layer (via the `mysql2`
+client); domain and YAML packages remain persistence-free. A non-durable
+in-memory adapter (`OKVNS_STORAGE_DRIVER=memory`) is retained for fast local
+demos and tests. There is still no authentication, authorization, Redis, queue,
+or filesystem-backed persistence.
 
 ## Layer Responsibilities
 
@@ -40,10 +49,18 @@ The first implementation intentionally has no database, Redis, queue, filesystem
 
 The API reads:
 
-| Variable            | Default | Purpose              |
-| ------------------- | ------- | -------------------- |
-| `OKVNS_API_PORT`    | `3000`  | API listen port.     |
-| `OKVNS_CORS_ORIGIN` | `*`     | CORS origin setting. |
+| Variable                         | Default                | Purpose                                         |
+| -------------------------------- | ---------------------- | ----------------------------------------------- |
+| `OKVNS_API_PORT`                 | `3000`                 | API listen port.                                |
+| `OKVNS_CORS_ORIGIN`              | `*`                    | CORS origin setting.                            |
+| `OKVNS_STORAGE_DRIVER`           | `mysql`                | Storage backend: `mysql` (durable) or `memory`. |
+| `OKVNS_MYSQL_HOST`               | _(required for mysql)_ | MySQL host.                                     |
+| `OKVNS_MYSQL_PORT`               | `3306`                 | MySQL port.                                     |
+| `OKVNS_MYSQL_DATABASE`           | _(required for mysql)_ | MySQL database name.                            |
+| `OKVNS_MYSQL_USER`               | _(required for mysql)_ | MySQL user.                                     |
+| `OKVNS_MYSQL_PASSWORD`           | `` (empty)             | MySQL password.                                 |
+| `OKVNS_MYSQL_POOL_LIMIT`         | `10`                   | Max pooled connections.                         |
+| `OKVNS_MYSQL_CONNECT_TIMEOUT_MS` | `10000`                | Connection timeout in milliseconds.             |
 
 The admin frontend reads:
 
@@ -54,7 +71,7 @@ The admin frontend reads:
 
 ## Cloud-Native Principles
 
-- Services are stateless.
+- The API and admin frontend run as stateless processes; durable state lives in the MySQL backing service.
 - Runtime configuration is provided through environment variables.
 - Services are packaged as Linux containers.
 - Logs are written to stdout and stderr.
@@ -68,7 +85,7 @@ The admin frontend reads:
 | Codebase            | One Git repository for all apps and shared packages.                          |
 | Dependencies        | Explicit dependencies per app or package.                                     |
 | Configuration       | Environment variables for runtime configuration.                              |
-| Backing services    | None in the first implementation; state is in-memory only.                    |
+| Backing services    | MySQL is an attached backing service configured via environment variables.    |
 | Build, release, run | Build artifacts are produced separately from runtime containers.              |
 | Processes           | Services run as stateless processes.                                          |
 | Port binding        | Services expose HTTP APIs through network ports.                              |

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-OKVNS: organizes UTF-8 key-value entries inside named namespaces, exposed via a NestJS REST API and a React/Vite admin frontend. A pnpm workspace organized by clean-architecture layers. **Storage is in-memory only** (no DB/Redis/queues) and there is **no auth** — state is intentionally lost on restart. Do not add durability or pretend it exists.
+OKVNS: organizes UTF-8 key-value entries inside named namespaces, exposed via a NestJS REST API and a React/Vite admin frontend. A pnpm workspace organized by clean-architecture layers. **Storage is durable in MySQL** (default runtime; see ADR-0008) — namespaces and entries survive restarts. A non-durable `OKVNS_STORAGE_DRIVER=memory` profile and an in-memory fake repository remain for fast demos and tests. There is still **no auth**, and no Redis/queues. MySQL types stay inside `apps/api` infrastructure (`src/infrastructure/mysql/`); domain/application/yaml packages must remain persistence-free.
 
 ## Commands
 
@@ -34,7 +34,13 @@ pnpm exec playwright test e2e/namespaces.spec.ts
 # Local dev servers:
 pnpm --filter @okvns/api run start:dev      # http://localhost:3000
 pnpm --filter @okvns/admin-web run dev      # http://localhost:5173
+
+# MySQL: apply schema migrations (needs OKVNS_MYSQL_* env set). Or use memory:
+pnpm --filter @okvns/api run migrate        # plain-SQL runner, scripts/migrate.mjs
+OKVNS_STORAGE_DRIVER=memory pnpm --filter @okvns/api run start:dev  # non-durable demo
 ```
+
+The API default runtime uses MySQL and **fails startup** if `OKVNS_MYSQL_HOST/DATABASE/USER` are missing (unless `OKVNS_STORAGE_DRIVER=memory`). API tests default to the `memory` driver via `apps/api/test/setup.ts`; MySQL adapter/contract tests are gated on `OKVNS_TEST_MYSQL_*` and skip otherwise.
 
 Package builds must exist before running the API (`apps/api` imports the built `dist` of the workspace packages). `pnpm build` handles ordering; after editing a package, rebuild it (or the whole workspace) before running the API or E2E.
 
@@ -46,7 +52,7 @@ Layers, strictly one-directional (`shared` ← `domain` ← `application` → `y
 - `packages/domain` — `Namespace`/`Entry`/`ResourceName` value objects/entities and typed `DomainError` subclasses. **Must not import** NestJS, React, HTTP, persistence, or browser APIs. Enforced at 100% coverage.
 - `packages/application` — use cases + the `NamespaceRepository` port. Depends only on domain/yaml/shared, never on infrastructure. 100% coverage.
 - `packages/yaml` — strict OKVNS YAML parser/serializer. Throws its own `YamlError` (carrying an `ERROR_CODES` code), not domain errors. 100% coverage.
-- `apps/api` — NestJS presentation + the in-memory `NamespaceRepository` adapter. Use cases are wired in `app.module.ts` via `useCaseProvider(...)` injecting the `NAMESPACE_REPOSITORY` token.
+- `apps/api` — NestJS presentation + persistence adapters. `PersistenceModule` (`src/infrastructure/persistence.module.ts`) wires the `NAMESPACE_REPOSITORY` token and readiness indicator from `OKVNS_STORAGE_DRIVER` (MySQL adapter in `src/infrastructure/mysql/`, or the in-memory adapter). Use cases are wired in `app.module.ts` via `useCaseProvider(...)`. The `NamespaceRepository` port has transaction-oriented methods: `create` (insert, unique-constraint backed), atomic `rename`, and atomic `importNamespaces`.
 - `apps/admin-web` — React. **API request/response mapping is isolated** in `src/api/` (`HttpOkvnsApi` implements the `OkvnsApi` port); components consume it through `useApi()` context and never touch `fetch`/status codes directly.
 
 ### Error handling contract

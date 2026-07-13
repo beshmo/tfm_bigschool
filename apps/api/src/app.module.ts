@@ -19,7 +19,7 @@ import { HealthController } from './health/health.controller';
 import { NamespacesController } from './namespaces/namespaces.controller';
 import { EntriesController } from './entries/entries.controller';
 import { YamlController } from './yaml/yaml.controller';
-import { InMemoryNamespaceRepository } from './infrastructure/in-memory-namespace-repository';
+import { PersistenceModule } from './infrastructure/persistence.module';
 import { NAMESPACE_REPOSITORY } from './infrastructure/tokens';
 
 /** Wires a use case class to a provider constructed from the repository port. */
@@ -32,9 +32,9 @@ function useCaseProvider<T>(token: new (repository: NamespaceRepository) => T): 
 }
 
 @Module({
+  imports: [PersistenceModule],
   controllers: [HealthController, NamespacesController, EntriesController, YamlController],
   providers: [
-    { provide: NAMESPACE_REPOSITORY, useClass: InMemoryNamespaceRepository },
     useCaseProvider(CreateNamespaceUseCase),
     useCaseProvider(ListNamespacesUseCase),
     useCaseProvider(GetNamespaceUseCase),

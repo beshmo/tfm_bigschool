@@ -1,0 +1,109 @@
+# MySQL backing service for OKVNS.
+#
+# This is a baseline in-cluster reference for local/dev clusters. For production
+# prefer a managed MySQL service and point OKVNS_MYSQL_HOST at it, keeping the
+# Secret below (or an external-secrets equivalent) for credentials.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: okvns-mysql-secret
+  namespace: okvns
+  labels:
+    app.kubernetes.io/name: okvns-mysql
+    app.kubernetes.io/part-of: okvns
+type: Opaque
+stringData:
+  # Replace these with real credentials (or manage via a secrets operator).
+  MYSQL_ROOT_PASSWORD: 'change-me-root'
+  MYSQL_USER: 'okvns'
+  MYSQL_PASSWORD: 'change-me-app'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: okvns-mysql
+  namespace: okvns
+  labels:
+    app.kubernetes.io/name: okvns-mysql
+    app.kubernetes.io/part-of: okvns
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: okvns-mysql
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: mysql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: okvns-mysql
+  namespace: okvns
+  labels:
+    app.kubernetes.io/name: okvns-mysql
+    app.kubernetes.io/part-of: okvns
+spec:
+  serviceName: okvns-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: okvns-mysql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: okvns-mysql
+        app.kubernetes.io/part-of: okvns
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              value: 'okvns'
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: okvns-mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: okvns-mysql-secret
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: okvns-mysql-secret
+                  key: MYSQL_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+          livenessProbe:
+            exec:
+              command: ['mysqladmin', 'ping', '-h', 'localhost', '-uroot', '-p$(MYSQL_ROOT_PASSWORD)']
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ['mysqladmin', 'ping', '-h', 'localhost', '-uroot', '-p$(MYSQL_ROOT_PASSWORD)']
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: '1'
+              memory: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        resources:
+          requests:
+            storage: 2Gi

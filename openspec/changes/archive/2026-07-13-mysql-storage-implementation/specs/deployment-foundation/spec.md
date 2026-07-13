@@ -1,8 +1,4 @@
-## Purpose
-
-Local and Kubernetes deployment foundation for the OKVNS platform. Provides Docker Compose for local development, Kubernetes manifests for reference deployment, and runtime configuration through environment variables with health/readiness probes.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Local Docker Compose deployment
 The project SHALL provide Docker Compose configuration for local development with one container for the API, one container for the admin frontend, and one MySQL backing service with persistent local data.
@@ -59,9 +55,3 @@ The deployment SHALL use MySQL-backed durable runtime state and SHALL NOT rely o
 - **WHEN** the API pod or process restarts after namespaces and entries have been stored
 - **THEN** the stored namespaces and entries remain available after the API reconnects to MySQL
 
-### Requirement: Logs are written to standard streams
-Services SHALL write runtime logs to stdout and stderr rather than local log files.
-
-#### Scenario: Service emits logs to container output
-- **WHEN** the API or admin frontend container starts
-- **THEN** operational logs are visible through container logs

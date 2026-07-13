@@ -9,7 +9,8 @@ export class ImportYamlUseCase {
   /**
    * Parses and fully validates the YAML, building fresh namespace aggregates
    * before any storage write. Only after the entire document is validated are
-   * the namespaces upserted, so a failure leaves storage unchanged.
+   * the namespaces upserted, in a single storage transaction, so a validation
+   * or storage failure leaves storage unchanged.
    */
   async execute(yaml: string): Promise<NamespaceDto[]> {
     const parsed = parseNamespacesYaml(yaml);
@@ -20,9 +21,7 @@ export class ImportYamlUseCase {
       );
       return namespace;
     });
-    for (const namespace of built) {
-      await this.repository.save(namespace);
-    }
+    await this.repository.importNamespaces(built);
     return built.map((namespace) => namespace.toDto());
   }
 }
