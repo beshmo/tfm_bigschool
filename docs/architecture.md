@@ -4,14 +4,15 @@ OKVNS is a pnpm monorepo built along clean-architecture boundaries.
 
 ## Workspace Layout
 
-| Path                   | Role                                                       |
-| ---------------------- | ---------------------------------------------------------- |
-| `packages/shared`      | Framework-independent types, constants, and helpers.       |
-| `packages/domain`      | Entities, value objects, invariants, and business errors.  |
-| `packages/application` | Use cases and repository ports.                            |
-| `packages/yaml`        | Strict OKVNS YAML parser and serializer.                   |
-| `apps/api`             | NestJS REST API, MySQL repository adapter, and migrations. |
-| `apps/admin-web`       | React + Vite admin frontend.                               |
+| Path                     | Role                                                       |
+| ------------------------ | ---------------------------------------------------------- |
+| `packages/shared`        | Framework-independent types, constants, and helpers.       |
+| `packages/domain`        | Entities, value objects, invariants, and business errors.  |
+| `packages/application`   | Use cases and repository ports.                            |
+| `packages/yaml`          | Strict OKVNS YAML parser and serializer.                   |
+| `packages/okvns-wrapper` | External TypeScript client for reading entry values.       |
+| `apps/api`               | NestJS REST API, MySQL repository adapter, and migrations. |
+| `apps/admin-web`         | React + Vite admin frontend.                               |
 
 ## Storage Model
 
