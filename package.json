@@ -2,7 +2,7 @@
   "name": "okvns",
   "version": "0.1.0",
   "private": true,
-  "description": "OKVNS: organized UTF-8 key-value entries inside namespaces.",
+  "description": "OKVNS: runtime key-value settings that let services and apps change behavior without redeploys.",
   "license": "SEE LICENSE IN LICENSE",
   "packageManager": "pnpm@11.9.0",
   "engines": {

@@ -2,7 +2,7 @@
 
 TFM project for "Master en desarrollo con IA" by BigSchool.
 
-OKVNS (Organized Key-Value NamespaceS) organizes UTF-8 key-value entries inside named namespaces, exposed through a REST API and a React admin frontend.
+OKVNS (Organized Key-Value NamespaceS) is a runtime configuration platform that lets services and applications read centrally managed UTF-8 key-value settings from named namespaces, so operators can change behavior without redeploying the consuming apps.
 
 ## For Contributors
 
