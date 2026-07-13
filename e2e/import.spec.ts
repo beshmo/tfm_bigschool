@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test';
+import { cleanupE2eNamespaces } from './cleanup';
 
 const nsA = `e2e-import-a-${Date.now()}`;
 const nsB = `e2e-import-b-${Date.now()}`;
 const nsFile = `e2e-import-file-${Date.now()}`;
+
+test.afterAll(async () => {
+  await cleanupE2eNamespaces();
+});
 
 test('import YAML containing multiple namespaces and entries', async ({ page }) => {
   const yaml = `namespaces:

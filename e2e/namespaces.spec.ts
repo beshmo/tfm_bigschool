@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test';
+import { cleanupE2eNamespaces } from './cleanup';
 
-// Unique per run so the shared in-memory API state does not collide.
+// Unique per run so the shared durable API state does not collide.
 const ns = `e2e-ns-${Date.now()}`;
 const renamed = `${ns}-renamed`;
+
+test.afterAll(async () => {
+  await cleanupE2eNamespaces();
+});
 
 test('namespace CRUD workflow', async ({ page }) => {
   await page.goto('/');

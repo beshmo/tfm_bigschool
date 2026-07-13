@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { cleanupE2eNamespaces } from './cleanup';
 
 const nsA = `e2e-export-a-${Date.now()}`;
 const nsB = `e2e-export-b-${Date.now()}`;
+
+test.afterAll(async () => {
+  await cleanupE2eNamespaces();
+});
 
 test('export YAML for all namespaces and for a selected namespace', async ({ page }) => {
   // Seed two namespaces.

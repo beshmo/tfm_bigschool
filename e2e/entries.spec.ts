@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { cleanupE2eNamespaces } from './cleanup';
 
 const ns = `e2e-entry-${Date.now()}`;
+
+test.afterAll(async () => {
+  await cleanupE2eNamespaces();
+});
 
 test('entry CRUD workflow within a namespace', async ({ page }) => {
   await page.goto('/');
