@@ -30,8 +30,8 @@ New behavior should be developed test-first where practical.
 Expectations:
 
 - Write focused failing tests before implementing domain rules and application use cases.
-- Keep domain and application tests fast and independent from infrastructure.
-- Add integration tests when persistence, messaging, filesystem, or HTTP boundaries are introduced.
+- Keep domain and application tests fast and independent from infrastructure; use the in-memory fake repository, never a real database.
+- Add integration tests when persistence, messaging, filesystem, or HTTP boundaries are introduced. MySQL adapter integration and persistence tests are gated on `OKVNS_TEST_MYSQL_*` env vars and skip when no test database is configured (see `apps/api/test/mysql-test-db.ts`).
 - Do not consider a feature complete if its domain rules, use cases, and API contracts are untested.
 
 ## BDD Test Style
@@ -116,7 +116,13 @@ pnpm test:e2e:install
 Run E2E workflows:
 
 ```bash
+docker compose up -d mysql
 pnpm test:e2e
 ```
+
+Playwright E2E uses the durable MySQL profile. Starting the Compose `mysql`
+service is enough for local E2E because the Playwright web server runs the API
+migrations before startup and uses the default local MySQL credentials
+(`okvns`/`okvns` on `127.0.0.1:3306`).
 
 Coverage output is written to package or app `coverage/` directories, which are gitignored.

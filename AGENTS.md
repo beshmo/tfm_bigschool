@@ -21,15 +21,15 @@ TFM project for OKVNS: organized UTF-8 key-value entries inside namespaces.
 
 - Domain must not import NestJS, React, browser APIs, persistence clients, HTTP adapters, or framework decorators.
 - Application use cases depend on ports/interfaces, not infrastructure implementations.
-- Infrastructure implements application/domain ports; initial storage is in-memory only.
+- Infrastructure implements application/domain ports; the default durable storage is MySQL (`apps/api` adapter), with an in-memory adapter kept for tests and the `OKVNS_STORAGE_DRIVER=memory` profile.
 - Presentation layers map transport/UI input and output to application calls; keep API client mapping isolated from React components.
 - Shared packages expose stable types/utilities only, not service-specific business flows.
 
-## MVP Constraints
+## Constraints
 
 - No authentication or authorization in the first implementation.
-- No Redis, database, queue, filesystem-backed persistence, persistent volumes, or Kubernetes Secrets in the first implementation.
-- In-memory state is intentionally lost on restart; do not imply durability.
+- MySQL is the durable storage backend (see [ADR-0008](docs/adr/0008-use-mysql-for-durable-storage.md)); it requires Kubernetes Secrets for credentials and a persistent volume. No Redis, queue, or filesystem-backed persistence.
+- Namespace and entry data is durable and survives API restarts; readiness depends on MySQL connectivity and schema availability.
 - YAML import supports canonical `namespaces: [...]` and accepts the original single `namespace: ...` shape; export emits raw YAML using canonical `namespaces: [...]`.
 - YAML import validates the full document before mutating state, rejects unexpected keys, duplicate namespaces, duplicate entries, invalid names, non-string values, and oversized payloads.
 - Valid imports upsert by namespace name: create missing namespaces and replace entries for existing imported namespaces.

@@ -1,10 +1,4 @@
-import {
-  DuplicateNamespaceError,
-  Namespace,
-  NamespaceNotFoundError,
-  ResourceName,
-  compareNames,
-} from '@okvns/domain';
+import { Namespace, NamespaceNotFoundError, ResourceName, compareNames } from '@okvns/domain';
 import { type NamespaceDto } from '@okvns/shared';
 import { type NamespaceRepository } from './ports.js';
 
@@ -13,10 +7,9 @@ export class CreateNamespaceUseCase {
 
   async execute(name: unknown): Promise<NamespaceDto> {
     const namespace = Namespace.create(name);
-    if (await this.repository.existsByName(namespace.name)) {
-      throw new DuplicateNamespaceError(namespace.name);
-    }
-    await this.repository.save(namespace);
+    // `create` relies on the storage unique constraint, so concurrent requests
+    // for the same name cannot both succeed.
+    await this.repository.create(namespace);
     return namespace.toDto();
   }
 }
@@ -54,13 +47,11 @@ export class UpdateNamespaceUseCase {
     }
     const target = ResourceName.create(newName).value;
     if (target !== namespace.name) {
-      if (await this.repository.existsByName(target)) {
-        throw new DuplicateNamespaceError(target);
-      }
+      // Rename atomically in storage so a partial failure cannot drop the
+      // original namespace or leave the target name half-written.
+      await this.repository.rename(namespace.name, target);
       namespace.rename(target);
-      await this.repository.delete(currentName);
     }
-    await this.repository.save(namespace);
     return namespace.toDto();
   }
 }

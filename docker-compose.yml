@@ -1,6 +1,47 @@
-# Local OKVNS platform: API + admin frontend, in-memory state only.
-# No databases, Redis, queues, volumes, or secrets.
+# Local OKVNS platform: API + admin frontend backed by a durable MySQL database.
+#
+# Start everything (MySQL, one-shot migrations, API, admin) with:
+#   docker compose up --build
+#
+# Namespace/entry data is persisted in the `okvns-mysql-data` volume, so it
+# survives `docker compose restart api` and `docker compose up` cycles. Remove
+# it with `docker compose down -v` to reset stored data.
 services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: 'root'
+      MYSQL_DATABASE: 'okvns'
+      MYSQL_USER: 'okvns'
+      MYSQL_PASSWORD: 'okvns'
+    volumes:
+      - okvns-mysql-data:/var/lib/mysql
+    ports:
+      - '3306:3306'
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-proot']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # One-shot: create/upgrade the schema, then exit. The API waits for it to
+  # finish so readiness can succeed on first boot.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ['node', 'scripts/migrate.mjs']
+    environment:
+      OKVNS_MYSQL_HOST: 'mysql'
+      OKVNS_MYSQL_PORT: '3306'
+      OKVNS_MYSQL_DATABASE: 'okvns'
+      OKVNS_MYSQL_USER: 'okvns'
+      OKVNS_MYSQL_PASSWORD: 'okvns'
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: 'no'
+
   api:
     build:
       context: .
@@ -8,8 +49,19 @@ services:
     environment:
       OKVNS_API_PORT: '3000'
       OKVNS_CORS_ORIGIN: '*'
+      OKVNS_STORAGE_DRIVER: 'mysql'
+      OKVNS_MYSQL_HOST: 'mysql'
+      OKVNS_MYSQL_PORT: '3306'
+      OKVNS_MYSQL_DATABASE: 'okvns'
+      OKVNS_MYSQL_USER: 'okvns'
+      OKVNS_MYSQL_PASSWORD: 'okvns'
     ports:
       - '3000:3000'
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   admin-web:
     build:
@@ -22,3 +74,6 @@ services:
       - '8080:8080'
     depends_on:
       - api
+
+volumes:
+  okvns-mysql-data:

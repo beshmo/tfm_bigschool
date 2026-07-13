@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-0008](0008-use-mysql-for-durable-storage.md)
+
+> This decision applied to the MVP milestone. OKVNS now uses durable MySQL-backed
+> storage; see ADR-0008. The context below is retained for history.
 
 ## Context
 

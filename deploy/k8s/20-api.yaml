@@ -17,6 +17,27 @@ spec:
         app.kubernetes.io/name: okvns-api
         app.kubernetes.io/part-of: okvns
     spec:
+      # Apply the MySQL schema before the API starts serving so readiness can
+      # succeed. Migrations are idempotent, so re-running on each pod start is safe.
+      initContainers:
+        - name: migrate
+          image: okvns/api:latest
+          imagePullPolicy: IfNotPresent
+          command: ['node', 'scripts/migrate.mjs']
+          envFrom:
+            - configMapRef:
+                name: okvns-api-config
+          env:
+            - name: OKVNS_MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: okvns-mysql-secret
+                  key: MYSQL_USER
+            - name: OKVNS_MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: okvns-mysql-secret
+                  key: MYSQL_PASSWORD
       containers:
         - name: api
           # Build locally: docker build -f apps/api/Dockerfile -t okvns/api:latest .
@@ -28,6 +49,17 @@ spec:
           envFrom:
             - configMapRef:
                 name: okvns-api-config
+          env:
+            - name: OKVNS_MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: okvns-mysql-secret
+                  key: MYSQL_USER
+            - name: OKVNS_MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: okvns-mysql-secret
+                  key: MYSQL_PASSWORD
           livenessProbe:
             httpGet:
               path: /health

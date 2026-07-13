@@ -8,7 +8,10 @@ import { loadConfig } from '../src/config';
 export async function createTestApp(): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
   const app = moduleRef.createNestApplication();
-  applyGlobals(app, loadConfig({}));
+  // Read from the process environment so global config (and the wired storage
+  // driver) match; the test setup defaults OKVNS_STORAGE_DRIVER to `memory`.
+  applyGlobals(app, loadConfig());
+  app.enableShutdownHooks();
   await app.init();
   return app;
 }

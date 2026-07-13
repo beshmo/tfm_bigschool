@@ -1,0 +1,43 @@
+## MODIFIED Requirements
+
+### Requirement: Entry creation within namespace
+The system SHALL allow API clients and admin users to create an entry with a valid unique name inside an existing namespace, storing the entry in durable storage.
+
+#### Scenario: Create entry succeeds
+- **WHEN** a client submits a valid entry name and value for an existing namespace
+- **THEN** the system stores the entry inside that namespace and returns it with a successful status
+
+#### Scenario: Duplicate entry is rejected
+- **WHEN** a client submits an entry name already used in the target namespace
+- **THEN** the system returns a duplicate entry error without changing the existing entry
+
+#### Scenario: Create entry in missing namespace is rejected
+- **WHEN** a client creates an entry for a namespace that does not exist
+- **THEN** the system returns a safe namespace not-found error
+
+### Requirement: Entry update within namespace
+The system SHALL allow API clients and admin users to update an entry name, value, or both within an existing namespace, committing the update to durable storage.
+
+#### Scenario: Update entry succeeds
+- **WHEN** a client updates an existing entry with valid data
+- **THEN** the system stores the updated entry in the same namespace
+
+#### Scenario: Update entry to duplicate name is rejected
+- **WHEN** a client renames an entry to a name already used by another entry in the namespace
+- **THEN** the system returns a duplicate entry error without changing either entry
+
+#### Scenario: Failed entry update leaves entry unchanged
+- **WHEN** an entry update cannot be committed to durable storage
+- **THEN** the original entry remains available unchanged
+
+### Requirement: Entry deletion within namespace
+The system SHALL allow API clients and admin users to delete an entry from a namespace in durable storage.
+
+#### Scenario: Delete entry succeeds
+- **WHEN** a client deletes an existing entry from a namespace
+- **THEN** the entry is no longer available and the namespace remains available
+
+#### Scenario: Delete missing entry returns not found
+- **WHEN** a client deletes an entry that does not exist in the namespace
+- **THEN** the system returns a safe entry not-found error
+

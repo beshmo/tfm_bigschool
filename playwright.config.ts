@@ -8,6 +8,17 @@ import { defineConfig, devices } from '@playwright/test';
 const ADMIN_WEB_PORT = Number(process.env.OKVNS_E2E_WEB_PORT ?? 4173);
 const API_PORT = Number(process.env.OKVNS_E2E_API_PORT ?? 3000);
 const ADMIN_WEB_URL = `http://127.0.0.1:${ADMIN_WEB_PORT}`;
+const apiEnv = {
+  OKVNS_API_PORT: String(API_PORT),
+  OKVNS_STORAGE_DRIVER: 'mysql',
+  OKVNS_MYSQL_HOST: process.env.OKVNS_E2E_MYSQL_HOST ?? process.env.OKVNS_MYSQL_HOST ?? '127.0.0.1',
+  OKVNS_MYSQL_PORT: process.env.OKVNS_E2E_MYSQL_PORT ?? process.env.OKVNS_MYSQL_PORT ?? '3306',
+  OKVNS_MYSQL_DATABASE:
+    process.env.OKVNS_E2E_MYSQL_DATABASE ?? process.env.OKVNS_MYSQL_DATABASE ?? 'okvns',
+  OKVNS_MYSQL_USER: process.env.OKVNS_E2E_MYSQL_USER ?? process.env.OKVNS_MYSQL_USER ?? 'okvns',
+  OKVNS_MYSQL_PASSWORD:
+    process.env.OKVNS_E2E_MYSQL_PASSWORD ?? process.env.OKVNS_MYSQL_PASSWORD ?? 'okvns',
+};
 
 export default defineConfig({
   testDir: './e2e',
@@ -28,11 +39,11 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'pnpm --filter @okvns/api run start:prod',
+      command: 'pnpm --filter @okvns/api run migrate && pnpm --filter @okvns/api run start:prod',
       port: API_PORT,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
-      env: { OKVNS_API_PORT: String(API_PORT) },
+      env: apiEnv,
     },
     {
       command: 'pnpm --filter @okvns/admin-web run preview:e2e',
