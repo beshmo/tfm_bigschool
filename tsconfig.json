@@ -5,6 +5,7 @@
     { "path": "./packages/domain" },
     { "path": "./packages/application" },
     { "path": "./packages/yaml" },
+    { "path": "./packages/okvns-wrapper" },
     { "path": "./apps/api" },
     { "path": "./apps/admin-web" }
   ]
