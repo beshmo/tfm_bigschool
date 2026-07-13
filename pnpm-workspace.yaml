@@ -6,5 +6,6 @@ syncInjectedDepsAfterScripts:
   - build
 allowBuilds:
   '@nestjs/core': true
+  '@scarf/scarf': false
   '@swc/core': true
   esbuild: true

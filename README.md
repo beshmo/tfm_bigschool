@@ -99,10 +99,12 @@ pnpm --filter @okvns/admin-web run dev
 
 Local URLs:
 
-| Service   | URL                     |
-| --------- | ----------------------- |
-| API       | `http://localhost:3000` |
-| Admin web | `http://localhost:5173` |
+| Service       | URL                               |
+| ------------- | --------------------------------- |
+| API           | `http://localhost:3000`           |
+| API docs (UI) | `http://localhost:3000/docs`      |
+| OpenAPI JSON  | `http://localhost:3000/docs-json` |
+| Admin web     | `http://localhost:5173`           |
 
 ## Common Commands
 
