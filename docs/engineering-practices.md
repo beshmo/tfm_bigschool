@@ -116,7 +116,13 @@ pnpm test:e2e:install
 Run E2E workflows:
 
 ```bash
+docker compose up -d mysql
 pnpm test:e2e
 ```
+
+Playwright E2E uses the durable MySQL profile. Starting the Compose `mysql`
+service is enough for local E2E because the Playwright web server runs the API
+migrations before startup and uses the default local MySQL credentials
+(`okvns`/`okvns` on `127.0.0.1:3306`).
 
 Coverage output is written to package or app `coverage/` directories, which are gitignored.

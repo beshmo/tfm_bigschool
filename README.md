@@ -118,8 +118,14 @@ Playwright E2E:
 
 ```bash
 pnpm test:e2e:install
+docker compose up -d mysql
 pnpm test:e2e
 ```
+
+`pnpm test:e2e` runs API migrations before starting the API web server. The
+Compose `mysql` service exposes `127.0.0.1:3306` with database/user/password
+`okvns`, matching the Playwright E2E defaults. Use `docker compose down` when
+you are done, or `docker compose down -v` to also remove the local MySQL data.
 
 Docker Compose:
 
