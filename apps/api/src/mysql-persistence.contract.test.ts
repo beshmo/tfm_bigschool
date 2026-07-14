@@ -49,7 +49,14 @@ describe.skipIf(!mysqlTestAvailable)('MySQL-backed API persistence (contract)', 
     // A brand-new application instance reconnects to the same database.
     const second = await createTestApp();
     const res = await request(second.getHttpServer()).get('/namespaces/users').expect(200);
-    expect(res.body).toEqual({ name: 'users', entries: [{ name: 'admin', value: 'secret' }] });
+    expect(res.body).toMatchObject({
+      name: 'users',
+      entries: [{ name: 'admin', value: 'secret' }],
+    });
+    expect(res.body.created_at).toEqual(expect.any(String));
+    expect(res.body.modified_at).toEqual(expect.any(String));
+    expect(res.body.entries[0].created_at).toEqual(expect.any(String));
+    expect(res.body.entries[0].modified_at).toEqual(expect.any(String));
     await second.close();
   });
 

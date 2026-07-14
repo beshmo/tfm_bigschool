@@ -31,10 +31,12 @@ describe('Health and readiness', () => {
 });
 
 describe('Namespace endpoints', () => {
-  it('POST /namespaces creates a namespace', async () => {
+  it('POST /namespaces creates a namespace with timestamps', async () => {
     const res = await http.post('/namespaces').send({ name: 'users' });
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ name: 'users', entries: [] });
+    expect(res.body).toMatchObject({ name: 'users', entries: [] });
+    expect(res.body.created_at).toEqual(expect.any(String));
+    expect(res.body.modified_at).toEqual(expect.any(String));
   });
 
   it('POST /namespaces rejects an invalid name with a safe 400', async () => {
@@ -57,12 +59,16 @@ describe('Namespace endpoints', () => {
     expect(res.body.error.code).toBe('DUPLICATE_NAMESPACE');
   });
 
-  it('GET /namespaces lists namespaces in order', async () => {
+  it('GET /namespaces lists namespaces in order with timestamps', async () => {
     await http.post('/namespaces').send({ name: 'zeta' });
     await http.post('/namespaces').send({ name: 'alpha' });
     const res = await http.get('/namespaces');
     expect(res.status).toBe(200);
     expect(res.body.map((n: { name: string }) => n.name)).toEqual(['alpha', 'zeta']);
+    for (const namespace of res.body) {
+      expect(namespace.created_at).toEqual(expect.any(String));
+      expect(namespace.modified_at).toEqual(expect.any(String));
+    }
   });
 
   it('GET /namespaces/:name returns an existing namespace', async () => {
@@ -84,11 +90,13 @@ describe('Namespace endpoints', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('PUT /namespaces/:name renames a namespace', async () => {
-    await http.post('/namespaces').send({ name: 'users' });
+  it('PUT /namespaces/:name renames a namespace preserving created_at', async () => {
+    const created = await http.post('/namespaces').send({ name: 'users' });
     const res = await http.put('/namespaces/users').send({ name: 'people' });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('people');
+    expect(res.body.created_at).toBe(created.body.created_at);
+    expect(res.body.modified_at).toEqual(expect.any(String));
   });
 
   it('PUT /namespaces/:name returns 409 when renaming to an existing name', async () => {
@@ -116,12 +124,14 @@ describe('Entry endpoints', () => {
     await http.post('/namespaces').send({ name: 'users' });
   });
 
-  it('POST creates an entry', async () => {
+  it('POST creates an entry with timestamps', async () => {
     const res = await http
       .post('/namespaces/users/entries')
       .send({ name: 'admin', value: 'secret' });
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ name: 'admin', value: 'secret' });
+    expect(res.body).toMatchObject({ name: 'admin', value: 'secret' });
+    expect(res.body.created_at).toEqual(expect.any(String));
+    expect(res.body.modified_at).toEqual(expect.any(String));
   });
 
   it('POST returns 404 for a missing namespace', async () => {
@@ -142,17 +152,23 @@ describe('Entry endpoints', () => {
     expect(res.status).toBe(400);
   });
 
-  it('GET lists entries in order', async () => {
+  it('GET lists entries in order with timestamps', async () => {
     await http.post('/namespaces/users/entries').send({ name: 'zeta', value: '1' });
     await http.post('/namespaces/users/entries').send({ name: 'alpha', value: '2' });
     const res = await http.get('/namespaces/users/entries');
     expect(res.body.map((e: { name: string }) => e.name)).toEqual(['alpha', 'zeta']);
+    for (const entry of res.body) {
+      expect(entry.created_at).toEqual(expect.any(String));
+      expect(entry.modified_at).toEqual(expect.any(String));
+    }
   });
 
-  it('GET :name returns an entry', async () => {
+  it('GET :name returns an entry with timestamps', async () => {
     await http.post('/namespaces/users/entries').send({ name: 'admin', value: 'v' });
     const res = await http.get('/namespaces/users/entries/admin');
-    expect(res.body).toEqual({ name: 'admin', value: 'v' });
+    expect(res.body).toMatchObject({ name: 'admin', value: 'v' });
+    expect(res.body.created_at).toEqual(expect.any(String));
+    expect(res.body.modified_at).toEqual(expect.any(String));
   });
 
   it('GET :name returns 404 for a missing entry', async () => {
@@ -161,10 +177,28 @@ describe('Entry endpoints', () => {
     expect(res.body.error.code).toBe('ENTRY_NOT_FOUND');
   });
 
-  it('PUT updates an entry value', async () => {
-    await http.post('/namespaces/users/entries').send({ name: 'admin', value: 'v' });
+  it('PUT updates an entry value preserving created_at', async () => {
+    const created = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v' });
     const res = await http.put('/namespaces/users/entries/admin').send({ value: 'updated' });
-    expect(res.body).toEqual({ name: 'admin', value: 'updated' });
+    expect(res.body).toMatchObject({ name: 'admin', value: 'updated' });
+    expect(res.body.created_at).toBe(created.body.created_at);
+    expect(res.body.modified_at).toEqual(expect.any(String));
+  });
+
+  it('PUT renames an entry preserving created_at', async () => {
+    const created = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v' });
+    const res = await http.put('/namespaces/users/entries/admin').send({ name: 'root' });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ name: 'root', value: 'v' });
+    expect(res.body.created_at).toBe(created.body.created_at);
+    // The renamed entry is retrievable under its new name with the same created_at.
+    const fetched = await http.get('/namespaces/users/entries/root');
+    expect(fetched.body.created_at).toBe(created.body.created_at);
+    expect((await http.get('/namespaces/users/entries/admin')).status).toBe(404);
   });
 
   it('DELETE removes an entry', async () => {
@@ -251,11 +285,32 @@ describe('YAML endpoints', () => {
     expect((await http.get('/namespaces')).body).toEqual([]);
   });
 
-  it('GET /yaml/export exports all namespaces as raw YAML', async () => {
+  it('POST /yaml/import accepts but ignores supplied timestamp metadata', async () => {
+    const yaml = `namespaces:
+  - name: users
+    created_at: "2000-01-01T00:00:00.000Z"
+    modified_at: "2000-01-01T00:00:00.000Z"
+    entries:
+      - name: admin
+        value: secret
+        created_at: "2000-01-01T00:00:00.000Z"
+        modified_at: "2000-01-01T00:00:00.000Z"`;
+    const res = await http.post('/yaml/import').send({ yaml });
+    expect(res.status).toBe(201);
+    const [namespace] = res.body.namespaces;
+    expect(namespace.name).toBe('users');
+    // Timestamps are assigned by the store, not copied from the document.
+    expect(namespace.created_at).not.toBe('2000-01-01T00:00:00.000Z');
+    expect(namespace.entries[0].created_at).not.toBe('2000-01-01T00:00:00.000Z');
+  });
+
+  it('GET /yaml/export exports all namespaces as raw YAML with timestamp metadata', async () => {
     await http.post('/namespaces').send({ name: 'users' });
     const res = await http.get('/yaml/export');
     expect(res.status).toBe(200);
     expect(res.body.yaml).toContain('users');
+    expect(res.body.yaml).toContain('created_at');
+    expect(res.body.yaml).toContain('modified_at');
     expect(res.body.yaml).not.toContain('```');
   });
 
@@ -320,5 +375,23 @@ describe('OpenAPI document', () => {
     const importOp = body.paths['/yaml/import'].post;
     expect(Object.keys(importOp.requestBody.content)).toContain('multipart/form-data');
     expect(schemas.YamlImportFileDto.properties.file.format).toBe('binary');
+  });
+
+  it('documents timestamp fields on namespace, entry, and YAML schemas', async () => {
+    const { body } = await http.get('/docs-json');
+    const schemas = body.components.schemas;
+
+    for (const field of ['created_at', 'modified_at']) {
+      expect(schemas.NamespaceResponse.properties[field]).toBeDefined();
+      expect(schemas.NamespaceResponse.properties[field].format).toBe('date-time');
+      expect(schemas.EntryResponse.properties[field]).toBeDefined();
+      expect(schemas.EntryResponse.properties[field].format).toBe('date-time');
+    }
+
+    // The YAML import response is documented in terms of namespace schemas,
+    // so timestamp metadata is carried transitively.
+    expect(schemas.YamlImportResponse.properties.namespaces.items.$ref).toContain(
+      'NamespaceResponse',
+    );
   });
 });

@@ -3,25 +3,74 @@ import { compareNames } from '@okvns/shared';
 import { ApiError } from '../api/api-error';
 import type { EntryChangesInput, OkvnsApi } from '../api/okvns-api';
 
+interface FakeEntry {
+  value: string;
+  created_at: string;
+  modified_at: string;
+}
+
+interface FakeNamespace {
+  created_at: string;
+  modified_at: string;
+  entries: Map<string, FakeEntry>;
+}
+
+/** Namespace seed fixture; timestamps are optional and default when omitted. */
+export interface SeedNamespace {
+  name: string;
+  entries: Array<{ name: string; value: string; created_at?: string; modified_at?: string }>;
+  created_at?: string;
+  modified_at?: string;
+}
+
+const DEFAULT_TS = '2024-01-01T00:00:00.000Z';
+
 /**
  * In-memory OkvnsApi used by component tests. Mirrors the server's behavior
- * closely enough to exercise UI flows and error display without a real backend.
+ * closely enough to exercise UI flows and error display without a real backend,
+ * including namespace and entry `created_at`/`modified_at` timestamp metadata.
  */
 export class FakeOkvnsApi implements OkvnsApi {
-  private readonly namespaces = new Map<string, Map<string, string>>();
+  private readonly namespaces = new Map<string, FakeNamespace>();
+  private tick = 0;
 
-  seed(namespaces: NamespaceDto[]): void {
+  /** A strictly-increasing synthetic timestamp for mutations. */
+  private now(): string {
+    return new Date(Date.UTC(2025, 0, 1, 0, 0, this.tick++)).toISOString();
+  }
+
+  seed(namespaces: SeedNamespace[]): void {
     for (const ns of namespaces) {
-      this.namespaces.set(ns.name, new Map(ns.entries.map((e) => [e.name, e.value])));
+      this.namespaces.set(ns.name, {
+        created_at: ns.created_at ?? DEFAULT_TS,
+        modified_at: ns.modified_at ?? DEFAULT_TS,
+        entries: new Map(
+          ns.entries.map((e) => [
+            e.name,
+            {
+              value: e.value,
+              created_at: e.created_at ?? DEFAULT_TS,
+              modified_at: e.modified_at ?? DEFAULT_TS,
+            },
+          ]),
+        ),
+      });
     }
   }
 
   private toDto(name: string): NamespaceDto {
-    const entries = this.namespaces.get(name) ?? new Map();
+    const namespace = this.namespaces.get(name)!;
     return {
       name,
-      entries: [...entries.entries()]
-        .map(([entryName, value]) => ({ name: entryName, value }))
+      created_at: namespace.created_at,
+      modified_at: namespace.modified_at,
+      entries: [...namespace.entries.entries()]
+        .map(([entryName, entry]) => ({
+          name: entryName,
+          value: entry.value,
+          created_at: entry.created_at,
+          modified_at: entry.modified_at,
+        }))
         .sort((a, b) => compareNames(a.name, b.name)),
     };
   }
@@ -34,7 +83,12 @@ export class FakeOkvnsApi implements OkvnsApi {
     if (this.namespaces.has(name)) {
       throw new ApiError('DUPLICATE_NAMESPACE', `Namespace "${name}" already exists.`, [], 409);
     }
-    this.namespaces.set(name, new Map());
+    const timestamp = this.now();
+    this.namespaces.set(name, {
+      created_at: timestamp,
+      modified_at: timestamp,
+      entries: new Map(),
+    });
     return this.toDto(name);
   }
 
@@ -44,13 +98,12 @@ export class FakeOkvnsApi implements OkvnsApi {
   }
 
   async renameNamespace(name: string, newName: string): Promise<NamespaceDto> {
-    this.assertNamespace(name);
+    const namespace = this.assertNamespace(name);
     if (newName !== name && this.namespaces.has(newName)) {
       throw new ApiError('DUPLICATE_NAMESPACE', `Namespace "${newName}" already exists.`, [], 409);
     }
-    const entries = this.namespaces.get(name)!;
     this.namespaces.delete(name);
-    this.namespaces.set(newName, entries);
+    this.namespaces.set(newName, { ...namespace, modified_at: this.now() });
     return this.toDto(newName);
   }
 
@@ -65,12 +118,14 @@ export class FakeOkvnsApi implements OkvnsApi {
   }
 
   async createEntry(namespace: string, name: string, value: string): Promise<EntryDto> {
-    const entries = this.assertNamespace(namespace);
-    if (entries.has(name)) {
+    const ns = this.assertNamespace(namespace);
+    if (ns.entries.has(name)) {
       throw new ApiError('DUPLICATE_ENTRY', `Entry "${name}" already exists.`, [], 409);
     }
-    entries.set(name, value);
-    return { name, value };
+    const timestamp = this.now();
+    ns.entries.set(name, { value, created_at: timestamp, modified_at: timestamp });
+    ns.modified_at = timestamp;
+    return { name, value, created_at: timestamp, modified_at: timestamp };
   }
 
   async updateEntry(
@@ -78,20 +133,34 @@ export class FakeOkvnsApi implements OkvnsApi {
     name: string,
     changes: EntryChangesInput,
   ): Promise<EntryDto> {
-    const entries = this.assertNamespace(namespace);
-    if (!entries.has(name)) {
+    const ns = this.assertNamespace(namespace);
+    const existing = ns.entries.get(name);
+    if (!existing) {
       throw new ApiError('ENTRY_NOT_FOUND', `Entry "${name}" was not found.`, [], 404);
     }
     const nextName = changes.name ?? name;
-    const nextValue = changes.value ?? entries.get(name)!;
-    entries.delete(name);
-    entries.set(nextName, nextValue);
-    return { name: nextName, value: nextValue };
+    const nextValue = changes.value ?? existing.value;
+    const timestamp = this.now();
+    ns.entries.delete(name);
+    ns.entries.set(nextName, {
+      value: nextValue,
+      created_at: existing.created_at,
+      modified_at: timestamp,
+    });
+    ns.modified_at = timestamp;
+    return {
+      name: nextName,
+      value: nextValue,
+      created_at: existing.created_at,
+      modified_at: timestamp,
+    };
   }
 
   async deleteEntry(namespace: string, name: string): Promise<void> {
-    const entries = this.assertNamespace(namespace);
-    entries.delete(name);
+    const ns = this.assertNamespace(namespace);
+    if (ns.entries.delete(name)) {
+      ns.modified_at = this.now();
+    }
   }
 
   async importYaml(yaml: string): Promise<NamespaceDto[]> {
@@ -115,12 +184,12 @@ export class FakeOkvnsApi implements OkvnsApi {
     return `namespaces: ${name}`;
   }
 
-  private assertNamespace(name: string): Map<string, string> {
-    const entries = this.namespaces.get(name);
-    if (!entries) {
+  private assertNamespace(name: string): FakeNamespace {
+    const namespace = this.namespaces.get(name);
+    if (!namespace) {
       throw new ApiError('NAMESPACE_NOT_FOUND', `Namespace "${name}" was not found.`, [], 404);
     }
-    return entries;
+    return namespace;
   }
 }
 

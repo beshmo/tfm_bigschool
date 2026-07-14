@@ -5,7 +5,7 @@ React admin frontend for the OKVNS platform. Provides browser-based namespace ma
 ## Requirements
 
 ### Requirement: Admin namespace management UI
-The React admin frontend SHALL allow admin users to list, create, edit, view, and delete namespaces through the OKVNS API.
+The React admin frontend SHALL allow admin users to list, create, edit, view, and delete namespaces through the OKVNS API, and SHALL display namespace timestamp metadata returned by list and detail operations.
 
 #### Scenario: Admin creates namespace
 - **WHEN** an admin submits a valid namespace creation form
@@ -15,8 +15,12 @@ The React admin frontend SHALL allow admin users to list, create, edit, view, an
 - **WHEN** an admin submits an invalid or duplicate namespace
 - **THEN** the UI displays a useful validation or API error without exposing stack traces
 
+#### Scenario: Admin views namespace timestamps
+- **WHEN** an admin views the namespace list or a namespace detail page
+- **THEN** the UI displays the namespace `created_at` and `modified_at` values returned by the API
+
 ### Requirement: Admin entry management UI
-The React admin frontend SHALL allow admin users to list, create, edit, view, and delete entries within a selected namespace through the OKVNS API.
+The React admin frontend SHALL allow admin users to list, create, edit, view, and delete entries within a selected namespace through the OKVNS API, and SHALL display entry timestamp metadata returned by list and detail operations.
 
 #### Scenario: Admin creates entry
 - **WHEN** an admin submits a valid entry form for a namespace
@@ -25,6 +29,10 @@ The React admin frontend SHALL allow admin users to list, create, edit, view, an
 #### Scenario: Admin deletes entry
 - **WHEN** an admin confirms deletion of an existing entry
 - **THEN** the UI calls the API and removes the entry from the namespace view
+
+#### Scenario: Admin views entry timestamps
+- **WHEN** an admin views entries in a namespace detail page
+- **THEN** the UI displays each entry's `created_at` and `modified_at` values returned by the API
 
 ### Requirement: Admin YAML import UI
 The React admin frontend SHALL allow admin users to paste YAML content or upload a YAML file and import namespaces and entries through the OKVNS API. Pasted YAML MUST be submitted through the JSON `yaml` request field. Uploaded YAML files MUST be submitted directly as `multipart/form-data` using a single file field named `file`.
@@ -64,6 +72,10 @@ The React admin frontend SHALL isolate API request/response mapping from compone
 #### Scenario: API error is mapped for display
 - **WHEN** the API returns a safe error response
 - **THEN** the frontend API client maps it into UI state without relying on transport internals
+
+#### Scenario: Timestamp fields are available to components
+- **WHEN** the API client receives namespace or entry responses with `created_at` and `modified_at`
+- **THEN** it exposes those timestamp fields to frontend components without dropping or renaming them
 
 ### Requirement: Initial E2E workflows
 The project SHALL include Playwright workflows for namespace CRUD, entry CRUD, YAML import, and YAML export.

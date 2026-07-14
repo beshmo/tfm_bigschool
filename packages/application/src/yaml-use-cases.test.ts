@@ -25,6 +25,14 @@ describe('ImportYamlUseCase', () => {
     entries: []`;
     const result = await new ImportYamlUseCase(repository).execute(yaml);
     expect(result.map((n) => n.name)).toEqual(['users', 'settings']);
+    expect(result[0].created_at).toEqual(expect.any(String));
+    expect(result[0].modified_at).toEqual(expect.any(String));
+    expect(result[0].entries[0]).toMatchObject({
+      name: 'admin',
+      value: 'secret',
+      created_at: expect.any(String),
+      modified_at: expect.any(String),
+    });
     expect((await repository.findByName('users'))?.getEntry('admin').value).toBe('secret');
     expect(await repository.existsByName('settings')).toBe(true);
   });

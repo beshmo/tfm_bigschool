@@ -4,6 +4,7 @@ import type { NamespaceDto } from '@okvns/shared';
 import { useApi } from '../api/api-context';
 import { messageOf } from '../api/error-message';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { Timestamps } from '../components/Timestamps';
 
 export function NamespaceDetailPage() {
   const api = useApi();
@@ -112,6 +113,7 @@ export function NamespaceDetailPage() {
         <Link to="/">← Back to namespaces</Link>
       </p>
       <h1>Namespace: {namespace.name}</h1>
+      <Timestamps createdAt={namespace.created_at} modifiedAt={namespace.modified_at} />
 
       {error && <ErrorBanner message={error} />}
 
@@ -164,6 +166,7 @@ export function NamespaceDetailPage() {
                 />
                 <button type="submit">Save</button>
               </form>
+              <Timestamps createdAt={entry.created_at} modifiedAt={entry.modified_at} />
               <button
                 type="button"
                 aria-label={`Delete entry ${entry.name}`}
