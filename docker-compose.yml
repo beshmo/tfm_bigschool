@@ -16,6 +16,10 @@ services:
       MYSQL_PASSWORD: 'okvns'
     volumes:
       - okvns-mysql-data:/var/lib/mysql
+      # Adds the `okvns_test` database for the API's MySQL integration tests.
+      # MySQL only runs these scripts when initializing an empty data volume, so
+      # an existing volume needs `docker compose down -v` to pick them up.
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
     ports:
       - '3306:3306'
     healthcheck:
