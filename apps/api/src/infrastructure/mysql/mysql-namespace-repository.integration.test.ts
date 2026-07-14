@@ -207,6 +207,94 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
     const stored = await restarted.findByName('users');
     expect(stored?.getEntry('admin').value).toBe('secret');
   });
+
+  it('GIVEN descriptions WHEN created THEN they survive a repository restart', async () => {
+    const namespace = Namespace.create('users', 'the users namespace');
+    namespace.setEntries([Entry.create('admin', 'secret', 'the admin key')]);
+    await repository.create(namespace);
+
+    const restarted = new MysqlNamespaceRepository(pool);
+    const stored = await restarted.findByName('users');
+    expect(stored?.description).toBe('the users namespace');
+    expect(stored?.getEntry('admin').description).toBe('the admin key');
+  });
+
+  it('GIVEN no descriptions WHEN created THEN they read back as absent', async () => {
+    await repository.create(namespaceWith('users', [['admin', 'secret']]));
+
+    const stored = await repository.findByName('users');
+    expect(stored?.description).toBeUndefined();
+    expect(stored?.getEntry('admin').description).toBeUndefined();
+  });
+
+  it('GIVEN namespaces with descriptions WHEN listed THEN descriptions are included', async () => {
+    await repository.create(Namespace.create('users', 'ns doc'));
+
+    const listed = await repository.list();
+    expect(listed[0].description).toBe('ns doc');
+  });
+
+  it('GIVEN a namespace description change WHEN saved THEN it is stored and created_at is stable', async () => {
+    await repository.create(Namespace.create('users', 'old'));
+    const before = await repository.findByName('users');
+    const created = before!.createdAt;
+
+    before!.describe('new');
+    await repository.save(before!);
+
+    const after = await repository.findByName('users');
+    expect(after?.description).toBe('new');
+    expect(after?.createdAt).toBe(created);
+  });
+
+  it('GIVEN a namespace description WHEN cleared via save THEN it is stored as absent', async () => {
+    await repository.create(Namespace.create('users', 'old'));
+    const stored = await repository.findByName('users');
+
+    stored!.describe('   ');
+    await repository.save(stored!);
+
+    expect((await repository.findByName('users'))?.description).toBeUndefined();
+  });
+
+  it('GIVEN an entry description-only change WHEN saved THEN entry created is stable and modified advances', async () => {
+    const seed = Namespace.create('users');
+    seed.setEntries([Entry.create('admin', 'secret', 'old')]);
+    await repository.create(seed);
+    const before = await repository.findByName('users');
+    const entryCreated = before!.getEntry('admin').createdAt;
+    const entryModified = before!.getEntry('admin').modifiedAt;
+
+    // A second of separation guarantees a distinct MySQL TIMESTAMP.
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const changed = Namespace.create('users');
+    changed.setEntries([Entry.create('admin', 'secret', 'new')]);
+    await repository.save(changed);
+
+    const after = await repository.findByName('users');
+    expect(after!.getEntry('admin').description).toBe('new');
+    expect(after!.getEntry('admin').value).toBe('secret');
+    expect(after!.getEntry('admin').createdAt).toBe(entryCreated);
+    expect(after!.getEntry('admin').modifiedAt > entryModified).toBe(true);
+  });
+
+  it('GIVEN a namespace with a description WHEN renamed THEN the description is preserved', async () => {
+    await repository.create(Namespace.create('users', 'the users'));
+
+    await repository.rename('users', 'people');
+
+    expect((await repository.findByName('people'))?.description).toBe('the users');
+  });
+
+  it('GIVEN descriptions WHEN imported THEN they are stored', async () => {
+    const incoming = Namespace.create('users', 'ns doc');
+    incoming.setEntries([Entry.create('admin', 'secret', 'entry doc')]);
+    await repository.importNamespaces([incoming]);
+
+    const stored = await repository.findByName('users');
+    expect(stored?.description).toBe('ns doc');
+    expect(stored?.getEntry('admin').description).toBe('entry doc');
+  });
 });
 
 /**

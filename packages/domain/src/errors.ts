@@ -1,4 +1,4 @@
-import { ERROR_CODES, type ErrorCode } from '@okvns/shared';
+import { DESCRIPTION_MAX_LENGTH, ERROR_CODES, type ErrorCode } from '@okvns/shared';
 
 /**
  * Base class for all OKVNS business errors. Presentation layers map the stable
@@ -26,6 +26,24 @@ export class InvalidEntryValueError extends DomainError {
 
   constructor(readonly entryName: string) {
     super(`Entry value for "${entryName}" must be a UTF-8 string within the allowed size.`);
+  }
+}
+
+export class InvalidDescriptionError extends DomainError {
+  readonly code = ERROR_CODES.VALIDATION;
+
+  constructor(readonly resourceName: string) {
+    super(
+      `Description for "${resourceName}" must be a UTF-8 string of at most ${DESCRIPTION_MAX_LENGTH} characters.`,
+    );
+  }
+}
+
+export class EmptyNamespaceUpdateError extends DomainError {
+  readonly code = ERROR_CODES.VALIDATION;
+
+  constructor(readonly namespaceName: string) {
+    super(`Update for namespace "${namespaceName}" must change a name or a description.`);
   }
 }
 

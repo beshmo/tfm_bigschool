@@ -1,5 +1,9 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { ENTRY_VALUE_MAX_LENGTH, RESOURCE_NAME_MAX_LENGTH } from '@okvns/shared';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  DESCRIPTION_MAX_LENGTH,
+  ENTRY_VALUE_MAX_LENGTH,
+  RESOURCE_NAME_MAX_LENGTH,
+} from '@okvns/shared';
 
 /** Documented entry response body. */
 export class EntryResponse {
@@ -16,6 +20,13 @@ export class EntryResponse {
     example: 'secret',
   })
   value!: string;
+
+  @ApiPropertyOptional({
+    description: 'Human-facing description. Omitted when the entry has none.',
+    maxLength: DESCRIPTION_MAX_LENGTH,
+    example: 'API key used by the admin console.',
+  })
+  description?: string;
 
   @ApiProperty({
     description: 'When the entry was first created.',

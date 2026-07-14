@@ -1,8 +1,4 @@
-## Purpose
-
-MySQL-backed durable storage for OKVNS namespaces and entries. Covers storage durability, relational constraints, transaction behavior, and schema lifecycle.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: MySQL durable storage
 The system SHALL use MySQL as the default durable source of truth for namespaces, entries, and their optional descriptions.
@@ -14,31 +10,6 @@ The system SHALL use MySQL as the default durable source of truth for namespaces
 #### Scenario: MySQL is required for default runtime
 - **WHEN** the API starts in the default runtime profile without a reachable MySQL database
 - **THEN** the API readiness check does not report ready
-
-### Requirement: Relational storage constraints
-The MySQL schema MUST enforce unique namespace names and unique entry names within each namespace.
-
-#### Scenario: Duplicate namespace is rejected by storage
-- **WHEN** concurrent requests attempt to create the same namespace name
-- **THEN** only one namespace is stored
-- **AND** the duplicate request receives a safe duplicate namespace error
-
-#### Scenario: Duplicate entry is rejected by storage
-- **WHEN** concurrent requests attempt to create the same entry name in the same namespace
-- **THEN** only one entry is stored
-- **AND** the duplicate request receives a safe duplicate entry error
-
-### Requirement: Transactional persistence operations
-The system SHALL apply multi-step storage mutations inside MySQL transactions.
-
-#### Scenario: Namespace rename is atomic
-- **WHEN** a namespace rename fails after storage mutation begins
-- **THEN** the original namespace remains available with its entries
-- **AND** the target namespace name is not partially stored
-
-#### Scenario: YAML import transaction rolls back on failure
-- **WHEN** a valid YAML import begins applying multiple namespaces and a storage error occurs before completion
-- **THEN** none of the imported namespace changes are committed
 
 ### Requirement: Schema lifecycle
 The project SHALL provide repeatable MySQL schema setup and forward migrations for local development, test, and deployment environments.

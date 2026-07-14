@@ -55,7 +55,7 @@ export class EntriesController {
     @Param('namespace', NameParamPipe) namespace: string,
     @Body() body: CreateEntryDto,
   ): Promise<EntryDto> {
-    return this.createEntry.execute(namespace, body.name, body.value);
+    return this.createEntry.execute(namespace, body.name, body.value, body.description);
   }
 
   @Get(':name')
@@ -72,7 +72,7 @@ export class EntriesController {
   }
 
   @Put(':name')
-  @ApiOperation({ summary: 'Update an entry name and/or value.' })
+  @ApiOperation({ summary: 'Update an entry name, value, and/or description.' })
   @ApiParam({ name: 'name', description: 'Entry name.', example: 'admin' })
   @ApiOkResponse({ type: EntryResponse })
   @ApiBadRequestError()
@@ -83,7 +83,11 @@ export class EntriesController {
     @Param('name', NameParamPipe) name: string,
     @Body() body: UpdateEntryDto,
   ): Promise<EntryDto> {
-    return this.updateEntry.execute(namespace, name, { name: body.name, value: body.value });
+    return this.updateEntry.execute(namespace, name, {
+      name: body.name,
+      value: body.value,
+      description: body.description,
+    });
   }
 
   @Delete(':name')

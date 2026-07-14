@@ -117,6 +117,78 @@ describe('Namespace endpoints', () => {
     const res = await http.delete('/namespaces/missing');
     expect(res.status).toBe(404);
   });
+
+  it('POST /namespaces stores an optional description', async () => {
+    const res = await http.post('/namespaces').send({ name: 'users', description: 'the users' });
+    expect(res.status).toBe(201);
+    expect(res.body.description).toBe('the users');
+    expect((await http.get('/namespaces/users')).body.description).toBe('the users');
+  });
+
+  it('POST /namespaces omits a blank description', async () => {
+    const res = await http.post('/namespaces').send({ name: 'users', description: '   ' });
+    expect(res.status).toBe(201);
+    expect(res.body).not.toHaveProperty('description');
+  });
+
+  it('POST /namespaces rejects a non-string description with a safe 400', async () => {
+    const res = await http.post('/namespaces').send({ name: 'users', description: 42 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error).not.toHaveProperty('stack');
+  });
+
+  it('POST /namespaces rejects an oversized description with a safe 400', async () => {
+    const res = await http
+      .post('/namespaces')
+      .send({ name: 'users', description: 'x'.repeat(1001) });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('GET /namespaces includes descriptions when stored', async () => {
+    await http.post('/namespaces').send({ name: 'users', description: 'the users' });
+    const res = await http.get('/namespaces');
+    expect(res.body[0].description).toBe('the users');
+  });
+
+  it('PUT /namespaces/:name updates the description and refreshes modified_at', async () => {
+    const created = await http.post('/namespaces').send({ name: 'users', description: 'old' });
+    const res = await http.put('/namespaces/users').send({ description: 'new' });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ name: 'users', description: 'new' });
+    expect(res.body.created_at).toBe(created.body.created_at);
+    expect(res.body.modified_at >= created.body.modified_at).toBe(true);
+    expect((await http.get('/namespaces/users')).body.description).toBe('new');
+  });
+
+  it('PUT /namespaces/:name clears the description with a blank value', async () => {
+    await http.post('/namespaces').send({ name: 'users', description: 'old' });
+    const res = await http.put('/namespaces/users').send({ description: '  ' });
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('description');
+  });
+
+  it('PUT /namespaces/:name renames while preserving the description', async () => {
+    await http.post('/namespaces').send({ name: 'users', description: 'the users' });
+    const res = await http.put('/namespaces/users').send({ name: 'people' });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ name: 'people', description: 'the users' });
+  });
+
+  it('PUT /namespaces/:name rejects an empty update body', async () => {
+    await http.post('/namespaces').send({ name: 'users' });
+    const res = await http.put('/namespaces/users').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('PUT /namespaces/:name rejects an oversized description', async () => {
+    await http.post('/namespaces').send({ name: 'users' });
+    const res = await http.put('/namespaces/users').send({ description: 'x'.repeat(1001) });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
 });
 
 describe('Entry endpoints', () => {
@@ -206,6 +278,88 @@ describe('Entry endpoints', () => {
     const res = await http.delete('/namespaces/users/entries/admin');
     expect(res.status).toBe(204);
     expect((await http.get('/namespaces/users/entries/admin')).status).toBe(404);
+  });
+
+  it('POST stores an optional entry description', async () => {
+    const res = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 'the admin key' });
+    expect(res.status).toBe(201);
+    expect(res.body.description).toBe('the admin key');
+    expect((await http.get('/namespaces/users/entries/admin')).body.description).toBe(
+      'the admin key',
+    );
+  });
+
+  it('POST omits a blank entry description', async () => {
+    const res = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: '   ' });
+    expect(res.status).toBe(201);
+    expect(res.body).not.toHaveProperty('description');
+  });
+
+  it('POST rejects a non-string entry description with a safe 400', async () => {
+    const res = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 42 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error).not.toHaveProperty('stack');
+  });
+
+  it('POST rejects an oversized entry description with a safe 400', async () => {
+    const res = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 'x'.repeat(1001) });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('GET lists entries with descriptions when stored', async () => {
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 'docs' });
+    const res = await http.get('/namespaces/users/entries');
+    expect(res.body[0].description).toBe('docs');
+  });
+
+  it('PUT updates only the description preserving name, value, and created_at', async () => {
+    const created = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 'old' });
+    const res = await http.put('/namespaces/users/entries/admin').send({ description: 'new' });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ name: 'admin', value: 'v', description: 'new' });
+    expect(res.body.created_at).toBe(created.body.created_at);
+    expect(res.body.modified_at >= created.body.modified_at).toBe(true);
+  });
+
+  it('PUT preserves the description when updating only the value', async () => {
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 'docs' });
+    const res = await http.put('/namespaces/users/entries/admin').send({ value: 'v2' });
+    expect(res.body).toMatchObject({ value: 'v2', description: 'docs' });
+  });
+
+  it('PUT clears the entry description with a blank value', async () => {
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 'docs' });
+    const res = await http.put('/namespaces/users/entries/admin').send({ description: '  ' });
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('description');
+  });
+
+  it('PUT refreshes the namespace modified_at when an entry description changes', async () => {
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 'old' });
+    const before = await http.get('/namespaces/users');
+    await http.put('/namespaces/users/entries/admin').send({ description: 'new' });
+    const after = await http.get('/namespaces/users');
+    expect(after.body.modified_at >= before.body.modified_at).toBe(true);
   });
 });
 
@@ -327,6 +481,47 @@ describe('YAML endpoints', () => {
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NAMESPACE_NOT_FOUND');
   });
+
+  it('POST /yaml/import imports namespace and entry descriptions', async () => {
+    const yaml = `namespaces:
+  - name: users
+    description: the users
+    entries:
+      - name: admin
+        value: secret
+        description: the admin key`;
+    const res = await http.post('/yaml/import').send({ yaml });
+    expect(res.status).toBe(201);
+    expect(res.body.namespaces[0].description).toBe('the users');
+    expect(res.body.namespaces[0].entries[0].description).toBe('the admin key');
+    expect((await http.get('/namespaces/users')).body.description).toBe('the users');
+  });
+
+  it('POST /yaml/import returns 400 for an oversized description', async () => {
+    const yaml = `namespaces:
+  - name: users
+    description: "${'x'.repeat(1001)}"
+    entries: []`;
+    const res = await http.post('/yaml/import').send({ yaml });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('INVALID_YAML');
+    expect((await http.get('/namespaces/users')).status).toBe(404);
+  });
+
+  it('GET /yaml/export includes descriptions only when stored', async () => {
+    await http.post('/namespaces').send({ name: 'users', description: 'the users' });
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 'the admin key' });
+    await http.post('/namespaces').send({ name: 'plain' });
+
+    const res = await http.get('/yaml/export');
+    expect(res.body.yaml).toContain('description: the users');
+    expect(res.body.yaml).toContain('description: the admin key');
+
+    const plain = await http.get('/yaml/export/plain');
+    expect(plain.body.yaml).not.toContain('description');
+  });
 });
 
 describe('OpenAPI document', () => {
@@ -390,6 +585,36 @@ describe('OpenAPI document', () => {
 
     // The YAML import response is documented in terms of namespace schemas,
     // so timestamp metadata is carried transitively.
+    expect(schemas.YamlImportResponse.properties.namespaces.items.$ref).toContain(
+      'NamespaceResponse',
+    );
+  });
+
+  it('documents optional description fields with the 1000-character limit', async () => {
+    const { body } = await http.get('/docs-json');
+    const schemas = body.components.schemas;
+
+    // Response schemas expose an optional description.
+    for (const schema of ['NamespaceResponse', 'EntryResponse']) {
+      expect(schemas[schema].properties.description.type).toBe('string');
+      expect(schemas[schema].properties.description.maxLength).toBe(1000);
+      expect(schemas[schema].required ?? []).not.toContain('description');
+    }
+
+    // Request schemas accept an optional description on create and update.
+    for (const schema of [
+      'NamespaceInputDto',
+      'UpdateNamespaceDto',
+      'CreateEntryDto',
+      'UpdateEntryDto',
+    ]) {
+      expect(schemas[schema].properties.description.type).toBe('string');
+      expect(schemas[schema].properties.description.maxLength).toBe(1000);
+      expect(schemas[schema].required ?? []).not.toContain('description');
+    }
+
+    // The YAML import response carries descriptions transitively via
+    // NamespaceResponse, asserted above.
     expect(schemas.YamlImportResponse.properties.namespaces.items.$ref).toContain(
       'NamespaceResponse',
     );

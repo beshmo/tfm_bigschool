@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Namespace, compareNames } from './namespace.js';
 import { Entry } from './entry.js';
-import { DuplicateEntryError, EntryNotFoundError, InvalidResourceNameError } from './errors.js';
+import {
+  DuplicateEntryError,
+  EntryNotFoundError,
+  InvalidDescriptionError,
+  InvalidResourceNameError,
+} from './errors.js';
 
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
@@ -156,6 +161,111 @@ describe('Namespace', () => {
     expect(ns.createdAt).toBe('2019-01-01T00:00:00.000Z');
     expect(ns.modifiedAt).toBe('2021-01-01T00:00:00.000Z');
     expect(ns.getEntry('k').value).toBe('v');
+  });
+
+  it('GIVEN a valid description WHEN created THEN it is trimmed and kept', () => {
+    expect(Namespace.create('a', '  app settings  ').description).toBe('app settings');
+  });
+
+  it('GIVEN no description WHEN created THEN the description is absent', () => {
+    expect(Namespace.create('a').description).toBeUndefined();
+  });
+
+  it('GIVEN a whitespace-only description WHEN created THEN it normalizes to absent', () => {
+    expect(Namespace.create('a', '  \t ').description).toBeUndefined();
+  });
+
+  it('GIVEN a non-string description WHEN created THEN it throws InvalidDescriptionError', () => {
+    expect(() => Namespace.create('a', { bad: true })).toThrow(InvalidDescriptionError);
+  });
+
+  it('GIVEN a description at the max length WHEN created THEN it is accepted', () => {
+    expect(Namespace.create('a', 'x'.repeat(1000)).description).toHaveLength(1000);
+  });
+
+  it('GIVEN a description over the max length WHEN created THEN it throws InvalidDescriptionError', () => {
+    expect(() => Namespace.create('a', 'x'.repeat(1001))).toThrow(InvalidDescriptionError);
+  });
+
+  it('GIVEN a namespace WHEN described THEN the description changes and modification refreshes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    const ns = Namespace.create('a', 'old');
+    const createdAt = ns.createdAt;
+    vi.setSystemTime(new Date('2026-07-01T00:00:00.000Z'));
+    ns.describe('new');
+    expect(ns.description).toBe('new');
+    expect(ns.createdAt).toBe(createdAt);
+    expect(ns.modifiedAt).toBe('2026-07-01T00:00:00.000Z');
+  });
+
+  it('GIVEN a namespace with a description WHEN described with a blank value THEN it is cleared and modification refreshes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    const ns = Namespace.create('a', 'old');
+    vi.setSystemTime(new Date('2026-08-01T00:00:00.000Z'));
+    ns.describe('   ');
+    expect(ns.description).toBeUndefined();
+    expect(ns.modifiedAt).toBe('2026-08-01T00:00:00.000Z');
+  });
+
+  it('GIVEN an invalid description WHEN described THEN it throws InvalidDescriptionError', () => {
+    expect(() => Namespace.create('a').describe('x'.repeat(1001))).toThrow(InvalidDescriptionError);
+  });
+
+  it('GIVEN a renamed namespace WHEN inspected THEN the description is preserved', () => {
+    const ns = Namespace.create('a', 'docs');
+    ns.rename('b');
+    expect(ns.description).toBe('docs');
+  });
+
+  it('GIVEN stored state with a description WHEN rehydrated THEN the description is restored', () => {
+    const ns = Namespace.rehydrate(
+      'a',
+      '2019-01-01T00:00:00.000Z',
+      '2021-01-01T00:00:00.000Z',
+      [],
+      'docs',
+    );
+    expect(ns.description).toBe('docs');
+  });
+
+  it('GIVEN a namespace with descriptions WHEN cloned THEN namespace and entry descriptions are copied', () => {
+    const ns = Namespace.rehydrate(
+      'a',
+      '2019-01-01T00:00:00.000Z',
+      '2021-01-01T00:00:00.000Z',
+      [
+        Entry.rehydrate(
+          'k',
+          'v',
+          '2020-01-01T00:00:00.000Z',
+          '2020-06-01T00:00:00.000Z',
+          'entry doc',
+        ),
+      ],
+      'ns doc',
+    );
+    const copy = ns.clone();
+    expect(copy.description).toBe('ns doc');
+    expect(copy.getEntry('k').description).toBe('entry doc');
+  });
+
+  it('GIVEN a namespace with a description WHEN converted to DTO THEN the description is included', () => {
+    const ns = Namespace.rehydrate(
+      'a',
+      '2019-01-01T00:00:00.000Z',
+      '2021-01-01T00:00:00.000Z',
+      [],
+      'docs',
+    );
+    expect(ns.toDto()).toEqual({
+      name: 'a',
+      description: 'docs',
+      created_at: '2019-01-01T00:00:00.000Z',
+      modified_at: '2021-01-01T00:00:00.000Z',
+      entries: [],
+    });
   });
 
   it('GIVEN a namespace WHEN stamped THEN its timestamps are overwritten', () => {

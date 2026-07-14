@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import {
+  DESCRIPTION_MAX_LENGTH,
   ENTRY_VALUE_MAX_LENGTH,
   RESOURCE_NAME_MAX_LENGTH,
   RESOURCE_NAME_PATTERN,
@@ -28,6 +29,16 @@ export class CreateEntryDto {
   @IsString()
   @MaxLength(ENTRY_VALUE_MAX_LENGTH)
   value!: string;
+
+  @ApiPropertyOptional({
+    description: 'Optional human-facing description. Blank values are stored as no description.',
+    maxLength: DESCRIPTION_MAX_LENGTH,
+    example: 'API key used by the admin console.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(DESCRIPTION_MAX_LENGTH)
+  description?: string;
 }
 
 export class UpdateEntryDto {
@@ -54,4 +65,14 @@ export class UpdateEntryDto {
   @IsString()
   @MaxLength(ENTRY_VALUE_MAX_LENGTH)
   value?: string;
+
+  @ApiPropertyOptional({
+    description: 'New human-facing description. A blank value clears the stored description.',
+    maxLength: DESCRIPTION_MAX_LENGTH,
+    example: 'API key used by the admin console.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(DESCRIPTION_MAX_LENGTH)
+  description?: string;
 }

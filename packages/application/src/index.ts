@@ -1,5 +1,6 @@
 export { type NamespaceRepository } from './ports.js';
 export {
+  type NamespaceChanges,
   CreateNamespaceUseCase,
   ListNamespacesUseCase,
   GetNamespaceUseCase,

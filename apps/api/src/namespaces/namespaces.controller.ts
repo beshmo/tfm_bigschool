@@ -21,7 +21,7 @@ import {
   ApiConflictError,
   ApiNotFoundError,
 } from '../common/api-error.decorators';
-import { NamespaceInputDto } from './namespace.dto';
+import { NamespaceInputDto, UpdateNamespaceDto } from './namespace.dto';
 import { NamespaceResponse } from './namespace.schema';
 
 @ApiTags('namespaces')
@@ -48,7 +48,7 @@ export class NamespacesController {
   @ApiBadRequestError()
   @ApiConflictError('A namespace with the same name already exists.')
   create(@Body() body: NamespaceInputDto): Promise<NamespaceDto> {
-    return this.createNamespace.execute(body.name);
+    return this.createNamespace.execute(body.name, body.description);
   }
 
   @Get(':name')
@@ -62,7 +62,7 @@ export class NamespacesController {
   }
 
   @Put(':name')
-  @ApiOperation({ summary: 'Rename a namespace.' })
+  @ApiOperation({ summary: 'Update a namespace name and/or description.' })
   @ApiParam({ name: 'name', description: 'Current namespace name.', example: 'users' })
   @ApiOkResponse({ type: NamespaceResponse })
   @ApiBadRequestError()
@@ -70,9 +70,9 @@ export class NamespacesController {
   @ApiConflictError('A namespace with the target name already exists.')
   update(
     @Param('name', NameParamPipe) name: string,
-    @Body() body: NamespaceInputDto,
+    @Body() body: UpdateNamespaceDto,
   ): Promise<NamespaceDto> {
-    return this.updateNamespace.execute(name, body.name);
+    return this.updateNamespace.execute(name, { name: body.name, description: body.description });
   }
 
   @Delete(':name')

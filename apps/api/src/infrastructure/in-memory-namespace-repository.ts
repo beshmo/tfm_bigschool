@@ -79,7 +79,8 @@ export class InMemoryNamespaceRepository implements NamespaceRepository {
    * Stamps a namespace being upserted: preserves `createdAt` from the prior
    * stored version, refreshes the namespace `modifiedAt`, and for each entry
    * preserves `createdAt` while only refreshing `modifiedAt` for new or changed
-   * entries. Unchanged entries keep their stored timestamps.
+   * entries. An entry is changed when its value or its description differs from
+   * the stored one. Unchanged entries keep their stored timestamps.
    *
    * Entries are matched to their prior stored row by name. An entry with no
    * prior row under its name is either brand-new or a renamed entry: a renamed
@@ -96,7 +97,7 @@ export class InMemoryNamespaceRepository implements NamespaceRepository {
     );
     for (const entry of namespace.listEntries()) {
       const prior = previousEntries.get(entry.name);
-      if (prior && prior.value === entry.value) {
+      if (prior && prior.value === entry.value && prior.description === entry.description) {
         entry.stamp(prior.createdAt, prior.modifiedAt);
       } else if (prior) {
         entry.stamp(prior.createdAt, timestamp);

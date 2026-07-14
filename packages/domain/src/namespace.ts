@@ -1,4 +1,5 @@
 import { type NamespaceDto } from '@okvns/shared';
+import { normalizeDescription } from './description.js';
 import { DuplicateEntryError, EntryNotFoundError } from './errors.js';
 import { Entry } from './entry.js';
 import { ResourceName } from './resource-name.js';
@@ -11,8 +12,9 @@ const nowIso = (): string => new Date().toISOString();
  * entry-name uniqueness within itself. Entries are listed in deterministic
  * name order.
  *
- * Namespaces carry creation and aggregate-modification timestamps: `modifiedAt`
- * reflects the last namespace-level change (rename) or entry mutation. Any
+ * Namespaces carry an optional description plus creation and
+ * aggregate-modification timestamps: `modifiedAt` reflects the last
+ * namespace-level change (rename, description change) or entry mutation. Any
  * entry-collection mutation refreshes `modifiedAt`; repositories own final
  * timestamp assignment via `stamp` and rehydration.
  */
@@ -21,13 +23,20 @@ export class Namespace {
 
   private constructor(
     private currentName: string,
+    private currentDescription: string | undefined,
     private _createdAt: string,
     private _modifiedAt: string,
   ) {}
 
-  static create(name: unknown): Namespace {
+  static create(name: unknown, description?: unknown): Namespace {
     const timestamp = nowIso();
-    return new Namespace(ResourceName.create(name).value, timestamp, timestamp);
+    const resourceName = ResourceName.create(name);
+    return new Namespace(
+      resourceName.value,
+      normalizeDescription(description, resourceName.value),
+      timestamp,
+      timestamp,
+    );
   }
 
   /** Rebuilds a namespace from stored state, preserving its timestamps and
@@ -37,8 +46,9 @@ export class Namespace {
     createdAt: string,
     modifiedAt: string,
     entries: Entry[],
+    description?: unknown,
   ): Namespace {
-    const namespace = Namespace.create(name);
+    const namespace = Namespace.create(name, description);
     for (const entry of entries) {
       namespace.entriesByName.set(entry.name, entry);
     }
@@ -49,6 +59,10 @@ export class Namespace {
 
   get name(): string {
     return this.currentName;
+  }
+
+  get description(): string | undefined {
+    return this.currentDescription;
   }
 
   get createdAt(): string {
@@ -73,6 +87,13 @@ export class Namespace {
 
   rename(name: unknown): void {
     this.currentName = ResourceName.create(name).value;
+    this.touch();
+  }
+
+  /** Replaces the namespace description. Blank input clears it. Either way this
+   * is a namespace-level change, so `modifiedAt` moves forward. */
+  describe(description: unknown): void {
+    this.currentDescription = normalizeDescription(description, this.currentName);
     this.touch();
   }
 
@@ -141,14 +162,27 @@ export class Namespace {
   /** Deep copy with independent entry instances, preserving all timestamps. */
   clone(): Namespace {
     const entries = this.listEntries().map((entry) =>
-      Entry.rehydrate(entry.name, entry.value, entry.createdAt, entry.modifiedAt),
+      Entry.rehydrate(
+        entry.name,
+        entry.value,
+        entry.createdAt,
+        entry.modifiedAt,
+        entry.description,
+      ),
     );
-    return Namespace.rehydrate(this.currentName, this._createdAt, this._modifiedAt, entries);
+    return Namespace.rehydrate(
+      this.currentName,
+      this._createdAt,
+      this._modifiedAt,
+      entries,
+      this.currentDescription,
+    );
   }
 
   toDto(): NamespaceDto {
     return {
       name: this.currentName,
+      ...(this.currentDescription === undefined ? {} : { description: this.currentDescription }),
       created_at: this._createdAt,
       modified_at: this._modifiedAt,
       entries: this.listEntries().map((entry) => entry.toDto()),

@@ -5,6 +5,7 @@ import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql
 interface NamespaceRow extends RowDataPacket {
   id: number;
   name: string;
+  description: string | null;
   created_at: Date | string;
   modified_at: Date | string;
 }
@@ -13,6 +14,7 @@ interface EntryRow extends RowDataPacket {
   namespace_id: number;
   entry_name: string;
   value: string;
+  description: string | null;
   created_at: Date | string;
   modified_at: Date | string;
 }
@@ -20,6 +22,7 @@ interface EntryRow extends RowDataPacket {
 interface EntryValueRow extends RowDataPacket {
   entry_name: string;
   value: string;
+  description: string | null;
 }
 
 interface TimestampRow extends RowDataPacket {
@@ -44,6 +47,16 @@ function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
+/** Maps an absent domain description to a storable SQL NULL. */
+function toColumn(description: string | undefined): string | null {
+  return description ?? null;
+}
+
+/** Maps a nullable description column back to the domain's optional field. */
+function fromColumn(description: string | null): string | undefined {
+  return description ?? undefined;
+}
+
 /**
  * MySQL-backed implementation of the namespace repository port.
  *
@@ -62,14 +75,14 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
 
   async list(): Promise<Namespace[]> {
     const [namespaceRows] = await this.pool.query<NamespaceRow[]>(
-      'SELECT id, name, created_at, updated_at AS modified_at FROM namespaces ORDER BY name',
+      'SELECT id, name, description, created_at, updated_at AS modified_at FROM namespaces ORDER BY name',
     );
     if (namespaceRows.length === 0) {
       return [];
     }
     const ids = namespaceRows.map((row) => row.id);
     const [entryRows] = await this.pool.query<EntryRow[]>(
-      'SELECT namespace_id, entry_name, value, created_at, updated_at AS modified_at FROM entries WHERE namespace_id IN (?) ORDER BY entry_name',
+      'SELECT namespace_id, entry_name, value, description, created_at, updated_at AS modified_at FROM entries WHERE namespace_id IN (?) ORDER BY entry_name',
       [ids],
     );
     const entriesByNamespaceId = new Map<number, EntryRow[]>();
@@ -85,7 +98,7 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
 
   async findByName(name: string): Promise<Namespace | null> {
     const [namespaceRows] = await this.pool.query<NamespaceRow[]>(
-      'SELECT id, name, created_at, updated_at AS modified_at FROM namespaces WHERE name = ?',
+      'SELECT id, name, description, created_at, updated_at AS modified_at FROM namespaces WHERE name = ?',
       [name],
     );
     if (namespaceRows.length === 0) {
@@ -93,7 +106,7 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
     }
     const namespaceRow = namespaceRows[0];
     const [entryRows] = await this.pool.query<EntryRow[]>(
-      'SELECT namespace_id, entry_name, value, created_at, updated_at AS modified_at FROM entries WHERE namespace_id = ? ORDER BY entry_name',
+      'SELECT namespace_id, entry_name, value, description, created_at, updated_at AS modified_at FROM entries WHERE namespace_id = ? ORDER BY entry_name',
       [namespaceRow.id],
     );
     return this.toNamespace(namespaceRow, entryRows);
@@ -112,8 +125,8 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
       let namespaceId: number;
       try {
         const [result] = await connection.query<ResultSetHeader>(
-          'INSERT INTO namespaces (name) VALUES (?)',
-          [namespace.name],
+          'INSERT INTO namespaces (name, description) VALUES (?, ?)',
+          [namespace.name, toColumn(namespace.description)],
         );
         namespaceId = result.insertId;
       } catch (error) {
@@ -182,16 +195,16 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
     // duplicate-name update; the explicit updated_at bump keeps the namespace's
     // modification timestamp fresh even when only entries change.
     const [result] = await connection.query<ResultSetHeader>(
-      'INSERT INTO namespaces (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), updated_at = CURRENT_TIMESTAMP',
-      [namespace.name],
+      'INSERT INTO namespaces (name, description) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), description = VALUES(description), updated_at = CURRENT_TIMESTAMP',
+      [namespace.name, toColumn(namespace.description)],
     );
     const namespaceId = result.insertId;
 
     const [existingRows] = await connection.query<EntryValueRow[]>(
-      'SELECT entry_name, value FROM entries WHERE namespace_id = ?',
+      'SELECT entry_name, value, description FROM entries WHERE namespace_id = ?',
       [namespaceId],
     );
-    const existing = new Map(existingRows.map((row) => [row.entry_name, row.value]));
+    const existing = new Map(existingRows.map((row) => [row.entry_name, row]));
     const desired = namespace.listEntries();
     const desiredNames = new Set(desired.map((entry) => entry.name));
 
@@ -204,26 +217,38 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
     }
 
     for (const entry of desired) {
-      if (!existing.has(entry.name)) {
+      const prior = existing.get(entry.name);
+      if (!prior) {
         // A renamed entry has no prior row under its new name but carries a
         // preserved creation time (distinct from its modification time). Keep
         // that `created_at` so a rename does not reset it; brand-new entries
         // (createdAt === modifiedAt) fall back to the column default.
         if (entry.createdAt !== entry.modifiedAt) {
           await connection.query(
-            'INSERT INTO entries (namespace_id, entry_name, value, created_at) VALUES (?, ?, ?, ?)',
-            [namespaceId, entry.name, entry.value, new Date(entry.createdAt)],
+            'INSERT INTO entries (namespace_id, entry_name, value, description, created_at) VALUES (?, ?, ?, ?, ?)',
+            [
+              namespaceId,
+              entry.name,
+              entry.value,
+              toColumn(entry.description),
+              new Date(entry.createdAt),
+            ],
           );
         } else {
           await connection.query(
-            'INSERT INTO entries (namespace_id, entry_name, value) VALUES (?, ?, ?)',
-            [namespaceId, entry.name, entry.value],
+            'INSERT INTO entries (namespace_id, entry_name, value, description) VALUES (?, ?, ?, ?)',
+            [namespaceId, entry.name, entry.value, toColumn(entry.description)],
           );
         }
-      } else if (existing.get(entry.name) !== entry.value) {
+      } else if (
+        prior.value !== entry.value ||
+        fromColumn(prior.description) !== entry.description
+      ) {
+        // A description-only change is still a change: updating the row
+        // refreshes `updated_at` so `modified_at` reflects it.
         await connection.query(
-          'UPDATE entries SET value = ? WHERE namespace_id = ? AND entry_name = ?',
-          [entry.value, namespaceId, entry.name],
+          'UPDATE entries SET value = ?, description = ? WHERE namespace_id = ? AND entry_name = ?',
+          [entry.value, toColumn(entry.description), namespaceId, entry.name],
         );
       }
     }
@@ -240,10 +265,16 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
     if (entries.length === 0) {
       return;
     }
-    const values = entries.map((entry) => [namespaceId, entry.name, entry.value]);
-    await connection.query('INSERT INTO entries (namespace_id, entry_name, value) VALUES ?', [
-      values,
+    const values = entries.map((entry) => [
+      namespaceId,
+      entry.name,
+      entry.value,
+      toColumn(entry.description),
     ]);
+    await connection.query(
+      'INSERT INTO entries (namespace_id, entry_name, value, description) VALUES ?',
+      [values],
+    );
   }
 
   /**
@@ -294,13 +325,20 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
   /** Reconstructs a domain aggregate from stored rows, preserving timestamps. */
   private toNamespace(namespaceRow: NamespaceRow, entryRows: EntryRow[]): Namespace {
     const entries = entryRows.map((row) =>
-      Entry.rehydrate(row.entry_name, row.value, toIso(row.created_at), toIso(row.modified_at)),
+      Entry.rehydrate(
+        row.entry_name,
+        row.value,
+        toIso(row.created_at),
+        toIso(row.modified_at),
+        fromColumn(row.description),
+      ),
     );
     return Namespace.rehydrate(
       namespaceRow.name,
       toIso(namespaceRow.created_at),
       toIso(namespaceRow.modified_at),
       entries,
+      fromColumn(namespaceRow.description),
     );
   }
 }

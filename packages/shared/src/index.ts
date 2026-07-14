@@ -10,6 +10,8 @@
 export interface EntryDto {
   name: string;
   value: string;
+  /** Optional human-facing documentation. Absent when no description is stored. */
+  description?: string;
   /** ISO 8601 timestamp of when the entry was first created. */
   created_at: string;
   /** ISO 8601 timestamp of when the entry was last modified. */
@@ -19,6 +21,8 @@ export interface EntryDto {
 /** Serialized representation of a namespace as returned by the API. */
 export interface NamespaceDto {
   name: string;
+  /** Optional human-facing documentation. Absent when no description is stored. */
+  description?: string;
   entries: EntryDto[];
   /** ISO 8601 timestamp of when the namespace was first created. */
   created_at: string;
@@ -42,12 +46,16 @@ export interface ApiErrorDto {
 /** Request body used to create or rename a namespace. */
 export interface NamespaceInputDto {
   name: string;
+  /** Optional human-facing documentation. Blank values clear the description. */
+  description?: string;
 }
 
 /** Request body used to create or update an entry. */
 export interface EntryInputDto {
   name: string;
   value: string;
+  /** Optional human-facing documentation. Blank values clear the description. */
+  description?: string;
 }
 
 /** Request body used to import YAML. */
@@ -79,6 +87,12 @@ export const RESOURCE_NAME_MAX_LENGTH = 128;
 
 /** Maximum length, in UTF-16 code units, of an entry value. */
 export const ENTRY_VALUE_MAX_LENGTH = 65_536;
+
+/**
+ * Maximum length, in UTF-16 code units, of a namespace or entry description
+ * after trimming. Descriptions are short documentation, not payloads.
+ */
+export const DESCRIPTION_MAX_LENGTH = 1000;
 
 /** Maximum accepted request body size, in bytes, for JSON and YAML payloads. */
 export const REQUEST_BODY_MAX_BYTES = 1_048_576;

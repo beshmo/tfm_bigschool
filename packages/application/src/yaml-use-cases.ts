@@ -15,9 +15,11 @@ export class ImportYamlUseCase {
   async execute(yaml: string): Promise<NamespaceDto[]> {
     const parsed = parseNamespacesYaml(yaml);
     const built = parsed.map((namespaceDto) => {
-      const namespace = Namespace.create(namespaceDto.name);
+      const namespace = Namespace.create(namespaceDto.name, namespaceDto.description);
       namespace.setEntries(
-        namespaceDto.entries.map((entry) => Entry.create(entry.name, entry.value)),
+        namespaceDto.entries.map((entry) =>
+          Entry.create(entry.name, entry.value, entry.description),
+        ),
       );
       return namespace;
     });

@@ -75,6 +75,94 @@ describe('NamespaceDetailPage', () => {
     await waitFor(() => expect(screen.getByLabelText('Value for admin')).toHaveValue('rotated'));
   });
 
+  it('displays stored namespace and entry descriptions', async () => {
+    const api = new FakeOkvnsApi();
+    api.seed([
+      {
+        name: 'users',
+        description: 'the users namespace',
+        entries: [{ name: 'admin', value: 'secret', description: 'the admin key' }],
+      },
+    ]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByRole('heading', { name: 'Namespace: users' });
+
+    // Descriptions render both as displayed text and inside their edit control,
+    // so display assertions target the paragraph specifically.
+    expect(screen.getByText('the users namespace', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('the admin key', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it('updates the namespace description', async () => {
+    renderApp(seededApi(), '/namespaces/users');
+    await screen.findByRole('heading', { name: 'Namespace: users' });
+
+    await userEvent.type(screen.getByLabelText('Description (optional)'), 'Accounts.');
+    await userEvent.click(screen.getByRole('button', { name: 'Save description' }));
+
+    expect(await screen.findByText('Accounts.', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it('clears the namespace description with a blank value', async () => {
+    const api = new FakeOkvnsApi();
+    api.seed([{ name: 'users', description: 'old docs', entries: [] }]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByText('old docs', { selector: 'p' });
+
+    await userEvent.clear(screen.getByLabelText('Description (optional)'));
+    await userEvent.click(screen.getByRole('button', { name: 'Save description' }));
+
+    await waitFor(() => expect(screen.queryByText('old docs', { selector: 'p' })).toBeNull());
+  });
+
+  it('shows a validation error for an oversized namespace description', async () => {
+    renderApp(seededApi(), '/namespaces/users');
+    await screen.findByRole('heading', { name: 'Namespace: users' });
+
+    await userEvent.click(screen.getByLabelText('Description (optional)'));
+    await userEvent.paste('x'.repeat(1001));
+    await userEvent.click(screen.getByRole('button', { name: 'Save description' }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
+  it('creates a new entry with a description', async () => {
+    renderApp(seededApi(), '/namespaces/users');
+    await screen.findByRole('heading', { name: 'Namespace: users' });
+
+    await userEvent.type(screen.getByLabelText('Entry name'), 'token');
+    await userEvent.type(screen.getByLabelText('Entry value'), 'abc');
+    await userEvent.type(screen.getByLabelText('Entry description (optional)'), 'Service token.');
+    await userEvent.click(screen.getByRole('button', { name: 'Add entry' }));
+
+    expect(await screen.findByText('Service token.', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Entry description (optional)')).toHaveValue('');
+  });
+
+  it('updates an entry description while preserving its value', async () => {
+    renderApp(seededApi(), '/namespaces/users');
+    const descriptionInput = await screen.findByLabelText('Description for admin');
+    await userEvent.type(descriptionInput, 'The admin key.');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('The admin key.', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Value for admin')).toHaveValue('secret');
+  });
+
+  it('clears an entry description with a blank value', async () => {
+    const api = new FakeOkvnsApi();
+    api.seed([
+      { name: 'users', entries: [{ name: 'admin', value: 'secret', description: 'docs' }] },
+    ]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByText('docs', { selector: 'p' });
+
+    await userEvent.clear(screen.getByLabelText('Description for admin'));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(screen.queryByText('docs', { selector: 'p' })).toBeNull());
+  });
+
   it('deletes an entry', async () => {
     renderApp(seededApi(), '/namespaces/users');
     await screen.findByLabelText('Value for admin');
