@@ -1,13 +1,7 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Pool } from 'mysql2/promise';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createTestApp } from '../test/create-test-app';
-import {
-  createTestPool,
-  mysqlTestAvailable,
-  mysqlTestConfig,
-  resetSchema,
-} from '../test/mysql-test-db';
+import { mysqlTestAvailable, mysqlTestConfig, useMysqlTestSchema } from '../test/mysql-test-db';
 
 /**
  * Contract-level coverage that exercises the API against the real MySQL-backed
@@ -15,11 +9,10 @@ import {
  * Skipped unless a test database is configured.
  */
 describe.skipIf(!mysqlTestAvailable)('MySQL-backed API persistence (contract)', () => {
-  let pool: Pool;
+  useMysqlTestSchema();
   const savedEnv = { ...process.env };
 
   beforeAll(() => {
-    pool = createTestPool();
     process.env.OKVNS_STORAGE_DRIVER = 'mysql';
     process.env.OKVNS_MYSQL_HOST = mysqlTestConfig.host;
     process.env.OKVNS_MYSQL_PORT = String(mysqlTestConfig.port);
@@ -28,13 +21,8 @@ describe.skipIf(!mysqlTestAvailable)('MySQL-backed API persistence (contract)', 
     process.env.OKVNS_MYSQL_PASSWORD = mysqlTestConfig.password;
   });
 
-  afterAll(async () => {
-    await pool.end();
+  afterAll(() => {
     process.env = savedEnv;
-  });
-
-  beforeEach(async () => {
-    await resetSchema(pool);
   });
 
   it('GIVEN a namespace created through the API WHEN the app restarts THEN the data survives', async () => {

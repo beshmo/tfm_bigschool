@@ -31,7 +31,7 @@ Expectations:
 
 - Write focused failing tests before implementing domain rules and application use cases.
 - Keep domain and application tests fast and independent from infrastructure; use the in-memory fake repository, never a real database.
-- Add integration tests when persistence, messaging, filesystem, or HTTP boundaries are introduced. MySQL adapter integration and persistence tests are gated on `OKVNS_TEST_MYSQL_*` env vars and skip when no test database is configured (see `apps/api/test/mysql-test-db.ts`).
+- Add integration tests when persistence, messaging, filesystem, or HTTP boundaries are introduced. MySQL adapter integration and persistence tests are gated on `OKVNS_TEST_MYSQL_*` env vars and skip when no test database is configured (see `apps/api/test/mysql-test-db.ts`). `docker compose up -d mysql` provisions the `okvns_test` database they expect; point them at it with `OKVNS_TEST_MYSQL_HOST=127.0.0.1 OKVNS_TEST_MYSQL_DATABASE=okvns_test OKVNS_TEST_MYSQL_USER=okvns OKVNS_TEST_MYSQL_PASSWORD=okvns`.
 - Do not consider a feature complete if its domain rules, use cases, and API contracts are untested.
 
 ## BDD Test Style

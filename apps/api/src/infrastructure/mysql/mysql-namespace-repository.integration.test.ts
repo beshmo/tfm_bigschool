@@ -1,7 +1,7 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { Pool, PoolConnection } from 'mysql2/promise';
 import { DuplicateNamespaceError, Entry, Namespace, NamespaceNotFoundError } from '@okvns/domain';
-import { createTestPool, mysqlTestAvailable, resetSchema } from '../../../test/mysql-test-db';
+import { mysqlTestAvailable, useMysqlTestSchema } from '../../../test/mysql-test-db';
 import { MysqlNamespaceRepository } from './mysql-namespace-repository';
 
 /**
@@ -9,20 +9,11 @@ import { MysqlNamespaceRepository } from './mysql-namespace-repository';
  * configured via OKVNS_TEST_MYSQL_* env vars (see test/mysql-test-db.ts).
  */
 describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', () => {
-  let pool: Pool;
+  const getPool = useMysqlTestSchema();
   let repository: MysqlNamespaceRepository;
 
-  beforeAll(() => {
-    pool = createTestPool();
-  });
-
-  afterAll(async () => {
-    await pool.end();
-  });
-
-  beforeEach(async () => {
-    await resetSchema(pool);
-    repository = new MysqlNamespaceRepository(pool);
+  beforeEach(() => {
+    repository = new MysqlNamespaceRepository(getPool());
   });
 
   function namespaceWith(name: string, entries: Array<[string, string]> = []): Namespace {
@@ -121,7 +112,7 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
     // the first namespace's write must roll back with it.
     const failingRepository = new MysqlNamespaceRepository(
       failOnQuery(
-        pool,
+        getPool(),
         (sql, params) =>
           sql.startsWith('INSERT INTO namespaces') && Array.isArray(params) && params[0] === 'boom',
       ),
@@ -143,7 +134,7 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
     // failed insert must roll the whole reconciliation back and leave the
     // original entry.
     const failingRepository = new MysqlNamespaceRepository(
-      failOnQuery(pool, (sql) => sql.startsWith('INSERT INTO entries')),
+      failOnQuery(getPool(), (sql) => sql.startsWith('INSERT INTO entries')),
     );
 
     await expect(
@@ -203,7 +194,7 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
     await repository.create(namespaceWith('users', [['admin', 'secret']]));
 
     // A fresh adapter over the same database models an API/repository restart.
-    const restarted = new MysqlNamespaceRepository(pool);
+    const restarted = new MysqlNamespaceRepository(getPool());
     const stored = await restarted.findByName('users');
     expect(stored?.getEntry('admin').value).toBe('secret');
   });

@@ -1,9 +1,14 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import mysql, { type Pool } from 'mysql2/promise';
+import { afterAll, beforeAll, beforeEach } from 'vitest';
+import mysql, { type Pool, type RowDataPacket } from 'mysql2/promise';
 
 const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
+
+/** Advisory lock serializing the test files that share the test database. */
+const schemaLockName = 'okvns_test_schema';
+const schemaLockTimeoutSeconds = 120;
 
 /**
  * MySQL integration-test support. Tests opt in by setting connection env vars
@@ -22,7 +27,7 @@ export const mysqlTestConfig = {
 export const mysqlTestAvailable = Boolean(mysqlTestConfig.host);
 
 /** Opens a fresh connection pool to the test database. */
-export function createTestPool(): Pool {
+function createTestPool(): Pool {
   return mysql.createPool({
     host: mysqlTestConfig.host,
     port: mysqlTestConfig.port,
@@ -34,8 +39,77 @@ export function createTestPool(): Pool {
   });
 }
 
-/** Drops and recreates OKVNS tables by applying every migration file. */
-export async function resetSchema(pool: Pool): Promise<void> {
+/**
+ * Registers the lifecycle a MySQL-backed test file needs: a pool, exclusive
+ * access to the test database, and a clean schema before each test. Returns an
+ * accessor for the pool (only valid once `beforeAll` has run).
+ *
+ * Vitest runs test files in parallel workers, but every file targets the same
+ * database, and `resetSchema` drops the tables. Without exclusivity one file's
+ * reset wipes rows out from under another file's in-flight test. Each file
+ * holds a MySQL advisory lock for its whole run, so the database-backed files
+ * take turns while the rest of the suite still runs in parallel.
+ */
+export function useMysqlTestSchema(): () => Pool {
+  let pool: Pool;
+  let releaseSchemaLock: (() => Promise<void>) | undefined;
+
+  beforeAll(async () => {
+    pool = createTestPool();
+    releaseSchemaLock = await acquireSchemaLock(pool);
+  });
+
+  // Tolerate a failed beforeAll (an unreachable database, say) so teardown
+  // reports that failure rather than masking it with one of its own.
+  afterAll(async () => {
+    await releaseSchemaLock?.();
+    await pool?.end();
+  });
+
+  beforeEach(async () => {
+    await resetSchema(pool);
+  });
+
+  return () => pool;
+}
+
+/**
+ * Takes the advisory lock on a dedicated connection, held until the returned
+ * release function runs. The lock is session-scoped, so MySQL drops it on its
+ * own if a worker dies before releasing.
+ */
+async function acquireSchemaLock(pool: Pool): Promise<() => Promise<void>> {
+  const connection = await pool.getConnection();
+  try {
+    const [rows] = await connection.query<RowDataPacket[]>('SELECT GET_LOCK(?, ?) AS acquired', [
+      schemaLockName,
+      schemaLockTimeoutSeconds,
+    ]);
+    if (rows[0]?.acquired !== 1) {
+      throw new Error(
+        `Timed out after ${schemaLockTimeoutSeconds}s waiting for the MySQL test schema lock`,
+      );
+    }
+  } catch (error) {
+    connection.release();
+    throw error;
+  }
+
+  return async () => {
+    try {
+      await connection.query('SELECT RELEASE_LOCK(?)', [schemaLockName]);
+    } finally {
+      connection.release();
+    }
+  };
+}
+
+/**
+ * Drops and recreates OKVNS tables by applying every migration file. Internal
+ * to `useMysqlTestSchema`: calling it without holding the lock is what let
+ * parallel test files wipe each other's data.
+ */
+async function resetSchema(pool: Pool): Promise<void> {
   const connection = await pool.getConnection();
   try {
     await connection.query('SET FOREIGN_KEY_CHECKS = 0');
