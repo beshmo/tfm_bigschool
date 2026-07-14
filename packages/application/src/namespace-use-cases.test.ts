@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   DuplicateNamespaceError,
+  EmptyNamespaceUpdateError,
+  InvalidDescriptionError,
   InvalidResourceNameError,
   Namespace,
   NamespaceNotFoundError,
@@ -33,6 +35,24 @@ describe('CreateNamespaceUseCase', () => {
     await expect(new CreateNamespaceUseCase(repository).execute('bad name')).rejects.toBeInstanceOf(
       InvalidResourceNameError,
     );
+  });
+
+  it('GIVEN a description WHEN executed THEN it is stored and returned', async () => {
+    const dto = await new CreateNamespaceUseCase(repository).execute('users', '  the users  ');
+    expect(dto.description).toBe('the users');
+    expect((await repository.findByName('users'))?.description).toBe('the users');
+  });
+
+  it('GIVEN a blank description WHEN executed THEN the namespace is stored without one', async () => {
+    const dto = await new CreateNamespaceUseCase(repository).execute('users', '   ');
+    expect(dto.description).toBeUndefined();
+  });
+
+  it('GIVEN an invalid description WHEN executed THEN it throws a validation error', async () => {
+    await expect(
+      new CreateNamespaceUseCase(repository).execute('users', 'x'.repeat(1001)),
+    ).rejects.toBeInstanceOf(InvalidDescriptionError);
+    expect(await repository.existsByName('users')).toBe(false);
   });
 
   it('GIVEN an existing name WHEN executed THEN it throws DuplicateNamespaceError', async () => {
@@ -72,7 +92,7 @@ describe('UpdateNamespaceUseCase', () => {
     const useCase = new UpdateNamespaceUseCase(repository);
     const ns = Namespace.create('users');
     await repository.save(ns);
-    const dto = await useCase.execute('users', 'people');
+    const dto = await useCase.execute('users', { name: 'people' });
     expect(dto.name).toBe('people');
     expect(await repository.existsByName('users')).toBe(false);
     expect(await repository.existsByName('people')).toBe(true);
@@ -81,7 +101,7 @@ describe('UpdateNamespaceUseCase', () => {
   it('GIVEN a rename to the same name WHEN executed THEN it succeeds without deleting', async () => {
     const useCase = new UpdateNamespaceUseCase(repository);
     await repository.save(Namespace.create('users'));
-    const dto = await useCase.execute('users', 'users');
+    const dto = await useCase.execute('users', { name: 'users' });
     expect(dto.name).toBe('users');
     expect(await repository.existsByName('users')).toBe(true);
   });
@@ -90,22 +110,80 @@ describe('UpdateNamespaceUseCase', () => {
     const useCase = new UpdateNamespaceUseCase(repository);
     await repository.save(Namespace.create('users'));
     await repository.save(Namespace.create('people'));
-    await expect(useCase.execute('users', 'people')).rejects.toBeInstanceOf(
+    await expect(useCase.execute('users', { name: 'people' })).rejects.toBeInstanceOf(
       DuplicateNamespaceError,
     );
   });
 
   it('GIVEN a missing namespace WHEN renamed THEN it throws NamespaceNotFoundError', async () => {
     await expect(
-      new UpdateNamespaceUseCase(repository).execute('missing', 'x'),
+      new UpdateNamespaceUseCase(repository).execute('missing', { name: 'x' }),
     ).rejects.toBeInstanceOf(NamespaceNotFoundError);
   });
 
   it('GIVEN an invalid new name WHEN renamed THEN it throws a validation error', async () => {
     await repository.save(Namespace.create('users'));
     await expect(
-      new UpdateNamespaceUseCase(repository).execute('users', 'bad name'),
+      new UpdateNamespaceUseCase(repository).execute('users', { name: 'bad name' }),
     ).rejects.toBeInstanceOf(InvalidResourceNameError);
+  });
+
+  it('GIVEN an empty change set WHEN executed THEN it throws EmptyNamespaceUpdateError', async () => {
+    await repository.save(Namespace.create('users'));
+    await expect(
+      new UpdateNamespaceUseCase(repository).execute('users', {}),
+    ).rejects.toBeInstanceOf(EmptyNamespaceUpdateError);
+  });
+
+  it('GIVEN a description change WHEN executed THEN it is stored and the name is preserved', async () => {
+    await repository.save(Namespace.create('users', 'old'));
+    const dto = await new UpdateNamespaceUseCase(repository).execute('users', {
+      description: 'new',
+    });
+    expect(dto).toMatchObject({ name: 'users', description: 'new' });
+    expect((await repository.findByName('users'))?.description).toBe('new');
+  });
+
+  it('GIVEN a blank description WHEN executed THEN the description is cleared', async () => {
+    await repository.save(Namespace.create('users', 'old'));
+    const dto = await new UpdateNamespaceUseCase(repository).execute('users', {
+      description: '  ',
+    });
+    expect(dto.description).toBeUndefined();
+    expect((await repository.findByName('users'))?.description).toBeUndefined();
+  });
+
+  it('GIVEN an invalid description WHEN executed THEN it throws before renaming', async () => {
+    await repository.save(Namespace.create('users'));
+    await expect(
+      new UpdateNamespaceUseCase(repository).execute('users', {
+        name: 'people',
+        description: 'x'.repeat(1001),
+      }),
+    ).rejects.toBeInstanceOf(InvalidDescriptionError);
+    expect(await repository.existsByName('users')).toBe(true);
+    expect(await repository.existsByName('people')).toBe(false);
+  });
+
+  it('GIVEN a name and description change WHEN executed THEN both are applied', async () => {
+    await repository.save(Namespace.create('users', 'old'));
+    const dto = await new UpdateNamespaceUseCase(repository).execute('users', {
+      name: 'people',
+      description: 'new',
+    });
+    expect(dto).toMatchObject({ name: 'people', description: 'new' });
+    expect((await repository.findByName('people'))?.description).toBe('new');
+  });
+
+  it('GIVEN a description-only change WHEN executed THEN the namespace modified_at refreshes', async () => {
+    const ns = Namespace.create('users');
+    ns.stamp('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z');
+    await repository.save(ns);
+    const dto = await new UpdateNamespaceUseCase(repository).execute('users', {
+      description: 'new',
+    });
+    expect(dto.created_at).toBe('2020-01-01T00:00:00.000Z');
+    expect(dto.modified_at).not.toBe('2020-01-01T00:00:00.000Z');
   });
 });
 

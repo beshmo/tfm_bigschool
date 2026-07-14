@@ -4,17 +4,31 @@ import { ApiError } from './api-error';
 export interface EntryChangesInput {
   name?: string;
   value?: string;
+  /** A blank description clears the stored one; omit it to keep the current one. */
+  description?: string;
+}
+
+/** Partial namespace update: a name, a description, or both. */
+export interface NamespaceChangesInput {
+  name?: string;
+  /** A blank description clears the stored one; omit it to keep the current one. */
+  description?: string;
 }
 
 /** The admin frontend's view of the OKVNS API. Components depend on this port. */
 export interface OkvnsApi {
   listNamespaces(): Promise<NamespaceDto[]>;
-  createNamespace(name: string): Promise<NamespaceDto>;
+  createNamespace(name: string, description?: string): Promise<NamespaceDto>;
   getNamespace(name: string): Promise<NamespaceDto>;
-  renameNamespace(name: string, newName: string): Promise<NamespaceDto>;
+  updateNamespace(name: string, changes: NamespaceChangesInput): Promise<NamespaceDto>;
   deleteNamespace(name: string): Promise<void>;
   listEntries(namespace: string): Promise<EntryDto[]>;
-  createEntry(namespace: string, name: string, value: string): Promise<EntryDto>;
+  createEntry(
+    namespace: string,
+    name: string,
+    value: string,
+    description?: string,
+  ): Promise<EntryDto>;
   updateEntry(namespace: string, name: string, changes: EntryChangesInput): Promise<EntryDto>;
   deleteEntry(namespace: string, name: string): Promise<void>;
   importYaml(yaml: string): Promise<NamespaceDto[]>;
@@ -65,11 +79,11 @@ export class HttpOkvnsApi implements OkvnsApi {
     return this.request('/namespaces');
   }
 
-  createNamespace(name: string): Promise<NamespaceDto> {
+  createNamespace(name: string, description?: string): Promise<NamespaceDto> {
     return this.request('/namespaces', {
       method: 'POST',
       headers: JSON_HEADERS,
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, ...(description === undefined ? {} : { description }) }),
     });
   }
 
@@ -77,11 +91,11 @@ export class HttpOkvnsApi implements OkvnsApi {
     return this.request(`/namespaces/${encodeURIComponent(name)}`);
   }
 
-  renameNamespace(name: string, newName: string): Promise<NamespaceDto> {
+  updateNamespace(name: string, changes: NamespaceChangesInput): Promise<NamespaceDto> {
     return this.request(`/namespaces/${encodeURIComponent(name)}`, {
       method: 'PUT',
       headers: JSON_HEADERS,
-      body: JSON.stringify({ name: newName }),
+      body: JSON.stringify(changes),
     });
   }
 
@@ -93,11 +107,16 @@ export class HttpOkvnsApi implements OkvnsApi {
     return this.request(`/namespaces/${encodeURIComponent(namespace)}/entries`);
   }
 
-  createEntry(namespace: string, name: string, value: string): Promise<EntryDto> {
+  createEntry(
+    namespace: string,
+    name: string,
+    value: string,
+    description?: string,
+  ): Promise<EntryDto> {
     return this.request(`/namespaces/${encodeURIComponent(namespace)}/entries`, {
       method: 'POST',
       headers: JSON_HEADERS,
-      body: JSON.stringify({ name, value }),
+      body: JSON.stringify({ name, value, ...(description === undefined ? {} : { description }) }),
     });
   }
 

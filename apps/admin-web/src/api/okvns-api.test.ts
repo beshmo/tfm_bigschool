@@ -46,6 +46,71 @@ describe('HttpOkvnsApi', () => {
     expect(await api.getNamespace('users')).toEqual(dto);
   });
 
+  it('POST createNamespace sends an optional description', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ name: 'users', entries: [] }, 201));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.createNamespace('users', 'the users');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces',
+      expect.objectContaining({
+        body: JSON.stringify({ name: 'users', description: 'the users' }),
+      }),
+    );
+  });
+
+  it('PUT updateNamespace sends only the supplied changes', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ name: 'users', entries: [] }));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.updateNamespace('users', { description: 'docs' });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces/users',
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ description: 'docs' }) }),
+    );
+  });
+
+  it('POST createEntry sends an optional description', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ name: 'admin', value: 'v' }, 201));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.createEntry('users', 'admin', 'v', 'docs');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces/users/entries',
+      expect.objectContaining({
+        body: JSON.stringify({ name: 'admin', value: 'v', description: 'docs' }),
+      }),
+    );
+  });
+
+  it('omits description from create bodies when it is not supplied', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ name: 'admin', value: 'v' }, 201));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.createEntry('users', 'admin', 'v');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces/users/entries',
+      expect.objectContaining({ body: JSON.stringify({ name: 'admin', value: 'v' }) }),
+    );
+  });
+
+  it('preserves namespace and entry description fields on responses', async () => {
+    const dto = {
+      name: 'users',
+      description: 'the users',
+      created_at: '2024-05-01T00:00:00.000Z',
+      modified_at: '2024-06-01T00:00:00.000Z',
+      entries: [
+        {
+          name: 'admin',
+          value: 'secret',
+          description: 'the admin key',
+          created_at: '2024-05-02T00:00:00.000Z',
+          modified_at: '2024-06-02T00:00:00.000Z',
+        },
+      ],
+    };
+    const fetchImpl = vi.fn(async () => jsonResponse(dto));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    expect(await api.getNamespace('users')).toEqual(dto);
+  });
+
   it('maps a safe error body into an ApiError with code and status', async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({ error: { code: 'DUPLICATE_NAMESPACE', message: 'exists' } }, 409),

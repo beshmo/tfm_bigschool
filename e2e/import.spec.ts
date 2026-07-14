@@ -12,9 +12,11 @@ test.afterAll(async () => {
 test('import YAML containing multiple namespaces and entries', async ({ page }) => {
   const yaml = `namespaces:
   - name: ${nsA}
+    description: imported namespace a
     entries:
       - name: admin
         value: secret
+        description: imported admin key
   - name: ${nsB}
     entries:
       - name: token
@@ -31,6 +33,13 @@ test('import YAML containing multiple namespaces and entries', async ({ page }) 
   // Verify the imported namespaces are now listed on the home page.
   await page.getByRole('link', { name: 'Namespaces', exact: true }).click();
   await expect(page.getByRole('link', { name: nsA, exact: true })).toBeVisible();
+
+  // Imported descriptions are persisted and shown on the detail view.
+  await page.getByRole('link', { name: nsA, exact: true }).click();
+  await expect(page.getByLabel('Description (optional)', { exact: true })).toHaveValue(
+    'imported namespace a',
+  );
+  await expect(page.getByLabel('Description for admin')).toHaveValue('imported admin key');
 });
 
 test('import YAML from an uploaded file', async ({ page }) => {

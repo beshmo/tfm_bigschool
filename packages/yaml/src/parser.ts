@@ -1,20 +1,28 @@
 import { parse as parseYaml } from 'yaml';
-import { ERROR_CODES, REQUEST_BODY_MAX_BYTES, RESOURCE_NAME_PATTERN } from '@okvns/shared';
+import {
+  DESCRIPTION_MAX_LENGTH,
+  ERROR_CODES,
+  REQUEST_BODY_MAX_BYTES,
+  RESOURCE_NAME_PATTERN,
+} from '@okvns/shared';
 import { YamlError } from './errors.js';
 
 /**
- * Parsed entry. Import intentionally omits timestamp metadata: `created_at` and
- * `modified_at` keys are accepted on input but ignored, because timestamps
- * describe the target store lifecycle, not the source document.
+ * Parsed entry. Descriptions are user-authored data and are preserved, unlike
+ * timestamp metadata: `created_at` and `modified_at` keys are accepted on input
+ * but ignored, because timestamps describe the target store lifecycle, not the
+ * source document.
  */
 export interface ParsedEntry {
   name: string;
   value: string;
+  description?: string;
 }
 
 /** Parsed namespace, without timestamp metadata (see {@link ParsedEntry}). */
 export interface ParsedNamespace {
   name: string;
+  description?: string;
   entries: ParsedEntry[];
 }
 
@@ -48,6 +56,22 @@ function normalizeName(raw: unknown, message: string): string {
   return trimmed;
 }
 
+/**
+ * Validates an optional description at the YAML boundary, mirroring the domain
+ * rule: strings only, at most {@link DESCRIPTION_MAX_LENGTH} characters, with
+ * blank values normalized to absent.
+ */
+function parseDescription(raw: unknown, message: string): string | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (typeof raw !== 'string' || raw.trim().length > DESCRIPTION_MAX_LENGTH) {
+    throw invalid(message);
+  }
+  const trimmed = raw.trim();
+  return trimmed.length === 0 ? undefined : trimmed;
+}
+
 function parseEntries(raw: unknown, namespaceName: string): ParsedEntry[] {
   if (raw === undefined) {
     return [];
@@ -62,7 +86,12 @@ function parseEntries(raw: unknown, namespaceName: string): ParsedEntry[] {
       throw invalid('Each entry must be an object with "name" and "value".');
     }
     for (const key of Object.keys(item)) {
-      if (key !== 'name' && key !== 'value' && !IGNORED_METADATA_KEYS.has(key)) {
+      if (
+        key !== 'name' &&
+        key !== 'value' &&
+        key !== 'description' &&
+        !IGNORED_METADATA_KEYS.has(key)
+      ) {
         throw invalid(`Unexpected entry key "${key}".`);
       }
     }
@@ -70,6 +99,10 @@ function parseEntries(raw: unknown, namespaceName: string): ParsedEntry[] {
     if (typeof item.value !== 'string') {
       throw invalid(`Entry "${name}" must have a string value.`);
     }
+    const description = parseDescription(
+      item.description,
+      `Entry "${name}" description must be a string of at most ${DESCRIPTION_MAX_LENGTH} characters.`,
+    );
     if (seen.has(name)) {
       throw new YamlError(
         ERROR_CODES.DUPLICATE_ENTRY,
@@ -77,7 +110,11 @@ function parseEntries(raw: unknown, namespaceName: string): ParsedEntry[] {
       );
     }
     seen.add(name);
-    entries.push({ name, value: item.value });
+    entries.push({
+      name,
+      value: item.value,
+      ...(description === undefined ? {} : { description }),
+    });
   }
   return entries;
 }
@@ -125,7 +162,12 @@ export function parseNamespacesYaml(yaml: string): ParsedNamespace[] {
       throw invalid('Each namespace must be an object with "name" and "entries".');
     }
     for (const key of Object.keys(item)) {
-      if (key !== 'name' && key !== 'entries' && !IGNORED_METADATA_KEYS.has(key)) {
+      if (
+        key !== 'name' &&
+        key !== 'entries' &&
+        key !== 'description' &&
+        !IGNORED_METADATA_KEYS.has(key)
+      ) {
         throw invalid(`Unexpected namespace key "${key}".`);
       }
     }
@@ -137,7 +179,15 @@ export function parseNamespacesYaml(yaml: string): ParsedNamespace[] {
       );
     }
     seen.add(name);
-    namespaces.push({ name, entries: parseEntries(item.entries, name) });
+    const description = parseDescription(
+      item.description,
+      `Namespace "${name}" description must be a string of at most ${DESCRIPTION_MAX_LENGTH} characters.`,
+    );
+    namespaces.push({
+      name,
+      ...(description === undefined ? {} : { description }),
+      entries: parseEntries(item.entries, name),
+    });
   }
 
   return namespaces;

@@ -201,6 +201,96 @@ describe('parseNamespacesYaml', () => {
       { name: 'users', entries: [{ name: 'admin', value: 'secret' }] },
     ]);
   });
+
+  it('GIVEN namespace and entry descriptions WHEN parsed THEN they are preserved and trimmed', () => {
+    const yaml = `namespaces:
+  - name: users
+    description: "  the users  "
+    entries:
+      - name: admin
+        value: secret
+        description: the admin key`;
+    expect(parseNamespacesYaml(yaml)).toEqual([
+      {
+        name: 'users',
+        description: 'the users',
+        entries: [{ name: 'admin', value: 'secret', description: 'the admin key' }],
+      },
+    ]);
+  });
+
+  it('GIVEN blank descriptions WHEN parsed THEN they normalize to absent', () => {
+    const yaml = `namespaces:
+  - name: users
+    description: "   "
+    entries:
+      - name: admin
+        value: secret
+        description: ""`;
+    expect(parseNamespacesYaml(yaml)).toEqual([
+      { name: 'users', entries: [{ name: 'admin', value: 'secret' }] },
+    ]);
+  });
+
+  it('GIVEN a null description WHEN parsed THEN it normalizes to absent', () => {
+    const yaml = `namespaces:
+  - name: users
+    description:
+    entries: []`;
+    expect(parseNamespacesYaml(yaml)).toEqual([{ name: 'users', entries: [] }]);
+  });
+
+  it('GIVEN a non-string namespace description WHEN parsed THEN it throws INVALID_YAML', () => {
+    const yaml = `namespaces:
+  - name: users
+    description: 42
+    entries: []`;
+    expect(() => parseNamespacesYaml(yaml)).toThrowError(
+      expect.objectContaining({ code: ERROR_CODES.INVALID_YAML }),
+    );
+  });
+
+  it('GIVEN a non-string entry description WHEN parsed THEN it throws INVALID_YAML', () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret
+        description: [1, 2]`;
+    expect(() => parseNamespacesYaml(yaml)).toThrowError(
+      expect.objectContaining({ code: ERROR_CODES.INVALID_YAML }),
+    );
+  });
+
+  it('GIVEN an oversized namespace description WHEN parsed THEN it throws INVALID_YAML', () => {
+    const yaml = `namespaces:
+  - name: users
+    description: "${'x'.repeat(1001)}"
+    entries: []`;
+    expect(() => parseNamespacesYaml(yaml)).toThrowError(
+      expect.objectContaining({ code: ERROR_CODES.INVALID_YAML }),
+    );
+  });
+
+  it('GIVEN an oversized entry description WHEN parsed THEN it throws INVALID_YAML', () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret
+        description: "${'x'.repeat(1001)}"`;
+    expect(() => parseNamespacesYaml(yaml)).toThrowError(
+      expect.objectContaining({ code: ERROR_CODES.INVALID_YAML }),
+    );
+  });
+
+  it('GIVEN a description at the max length WHEN parsed THEN it is accepted', () => {
+    const yaml = `namespaces:
+  - name: users
+    description: "${'x'.repeat(1000)}"
+    entries: []`;
+    expect(parseNamespacesYaml(yaml)[0].description).toHaveLength(1000);
+  });
 });
 
 describe('serializeNamespacesYaml', () => {
@@ -254,6 +344,50 @@ describe('serializeNamespacesYaml', () => {
     expect(yaml).toContain('modified_at: 2020-02-01T00:00:00.000Z');
     expect(yaml).toContain('created_at: 2020-03-01T00:00:00.000Z');
     expect(yaml).toContain('modified_at: 2020-04-01T00:00:00.000Z');
+  });
+
+  it('GIVEN descriptions WHEN serialized THEN they are emitted and round-trip', () => {
+    const yaml = serializeNamespacesYaml([
+      {
+        name: 'users',
+        description: 'the users',
+        ...ts('2020-01-01T00:00:00.000Z', '2020-02-01T00:00:00.000Z'),
+        entries: [
+          {
+            name: 'admin',
+            value: 'secret',
+            description: 'the admin key',
+            ...ts('2020-03-01T00:00:00.000Z', '2020-04-01T00:00:00.000Z'),
+          },
+        ],
+      },
+    ]);
+    expect(yaml).toContain('description: the users');
+    expect(yaml).toContain('description: the admin key');
+    expect(parseNamespacesYaml(yaml)).toEqual([
+      {
+        name: 'users',
+        description: 'the users',
+        entries: [{ name: 'admin', value: 'secret', description: 'the admin key' }],
+      },
+    ]);
+  });
+
+  it('GIVEN no descriptions WHEN serialized THEN no description key is emitted', () => {
+    const yaml = serializeNamespacesYaml([
+      {
+        name: 'users',
+        ...ts('2020-01-01T00:00:00.000Z', '2020-02-01T00:00:00.000Z'),
+        entries: [
+          {
+            name: 'admin',
+            value: 'secret',
+            ...ts('2020-03-01T00:00:00.000Z', '2020-04-01T00:00:00.000Z'),
+          },
+        ],
+      },
+    ]);
+    expect(yaml).not.toContain('description');
   });
 
   it('GIVEN an empty namespace list WHEN serialized THEN it round-trips to an empty list', () => {

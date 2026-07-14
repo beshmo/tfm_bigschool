@@ -1,8 +1,4 @@
-## Purpose
-
-Entry CRUD operations scoped to a namespace, exposed through the REST API and admin frontend. Covers creation, listing, retrieval, update, description updates, and deletion with validated inputs and safe error responses.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Entry creation within namespace
 The system SHALL allow API clients and admin users to create an entry with a valid unique name, value, and optional description inside an existing namespace, storing the entry in durable storage and returning entry timestamp metadata.
@@ -75,17 +71,6 @@ The system SHALL allow API clients and admin users to update an entry name, valu
 #### Scenario: Failed entry update leaves entry unchanged
 - **WHEN** an entry update cannot be committed to durable storage
 - **THEN** the original entry remains available unchanged
-
-### Requirement: Entry deletion within namespace
-The system SHALL allow API clients and admin users to delete an entry from a namespace in durable storage.
-
-#### Scenario: Delete entry succeeds
-- **WHEN** a client deletes an existing entry from a namespace
-- **THEN** the entry is no longer available and the namespace remains available
-
-#### Scenario: Delete missing entry returns not found
-- **WHEN** a client deletes an entry that does not exist in the namespace
-- **THEN** the system returns a safe entry not-found error
 
 ### Requirement: Entry API contract
 The API SHALL expose entry endpoints with validated DTOs, safe error response shapes, and no stack traces or implementation details in responses.

@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { RESOURCE_NAME_MAX_LENGTH } from '@okvns/shared';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { DESCRIPTION_MAX_LENGTH, RESOURCE_NAME_MAX_LENGTH } from '@okvns/shared';
 import { EntryResponse } from '../entries/entry.schema';
 
 /** Documented namespace response body, including its entries. */
@@ -10,6 +10,13 @@ export class NamespaceResponse {
     example: 'users',
   })
   name!: string;
+
+  @ApiPropertyOptional({
+    description: 'Human-facing description. Omitted when the namespace has none.',
+    maxLength: DESCRIPTION_MAX_LENGTH,
+    example: 'Accounts for the admin console.',
+  })
+  description?: string;
 
   @ApiProperty({
     description: 'Entries contained in the namespace, ordered by name.',

@@ -21,14 +21,14 @@ and migration notes described below.
 | GET    | `/health`                          | Liveness probe.                                                         |
 | GET    | `/ready`                           | Readiness probe.                                                        |
 | GET    | `/namespaces`                      | List namespaces.                                                        |
-| POST   | `/namespaces`                      | Create a namespace (`{ "name": "..." }`).                               |
+| POST   | `/namespaces`                      | Create a namespace (`{ "name": "...", "description"? }`).               |
 | GET    | `/namespaces/:name`                | Get a namespace with its entries.                                       |
-| PUT    | `/namespaces/:name`                | Rename a namespace (`{ "name": "..." }`).                               |
+| PUT    | `/namespaces/:name`                | Update a namespace (`{ "name"?, "description"? }`).                     |
 | DELETE | `/namespaces/:name`                | Delete a namespace.                                                     |
 | GET    | `/namespaces/:name/entries`        | List entries in a namespace.                                            |
-| POST   | `/namespaces/:name/entries`        | Create an entry (`{ "name": "...", "value": "..." }`).                  |
+| POST   | `/namespaces/:name/entries`        | Create an entry (`{ "name": "...", "value": "...", "description"? }`).  |
 | GET    | `/namespaces/:name/entries/:entry` | Get an entry.                                                           |
-| PUT    | `/namespaces/:name/entries/:entry` | Update an entry (`{ "name"?, "value"? }`).                              |
+| PUT    | `/namespaces/:name/entries/:entry` | Update an entry (`{ "name"?, "value"?, "description"? }`).              |
 | DELETE | `/namespaces/:name/entries/:entry` | Delete an entry.                                                        |
 | POST   | `/yaml/import`                     | Import YAML (`{ "yaml": "..." }` JSON, or multipart file field `file`). |
 | GET    | `/yaml/export`                     | Export all namespaces as YAML (`{ "yaml": "..." }`).                    |
@@ -43,6 +43,27 @@ Namespace and entry names must be trimmed, non-empty UTF-8 strings matching:
 ```
 
 Names are limited to 128 characters after trimming.
+
+## Descriptions
+
+Namespaces and entries carry an optional `description`: short, human-facing
+documentation about what the resource is for.
+
+- Descriptions are optional everywhere: on create, on update, in YAML, and in
+  responses. A resource with no description omits the field entirely rather than
+  returning an empty string.
+- Descriptions must be strings of at most **1000 characters** after trimming.
+  Non-string or oversized descriptions are rejected at the API and YAML
+  boundaries with `VALIDATION_ERROR` / `INVALID_YAML` before anything is stored.
+- Values are trimmed, and a blank or whitespace-only description is normalized to
+  _no description_. Sending `{ "description": "  " }` on update therefore clears a
+  stored description.
+- On update, an omitted `description` leaves the stored one unchanged. `PUT
+/namespaces/:name` must contain a `name`, a `description`, or both; an empty
+  body is rejected with `VALIDATION_ERROR`.
+- Changing a description counts as a modification: it refreshes the resource's
+  `modified_at`, and an entry description change also refreshes its namespace's
+  aggregate `modified_at`.
 
 ## Error Shape
 
@@ -82,8 +103,13 @@ storage.
 Only these keys are allowed:
 
 - Root: `namespaces` or `namespace`, but not both
-- Namespace object: `name`, `entries`
-- Entry object: `name`, `value`
+- Namespace object: `name`, `entries`, optional `description`
+- Entry object: `name`, `value`, optional `description`
+
+Imported descriptions are user-authored data and are persisted (unlike
+`created_at`/`modified_at`, which are accepted but ignored). They follow the same
+rules as the API: strings of at most 1000 characters, with blanks normalized to
+no description.
 
 The importer rejects:
 
@@ -92,6 +118,7 @@ The importer rejects:
 - Duplicate entries in the same namespace after normalization
 - Invalid names
 - Non-string values
+- Non-string or oversized descriptions
 - Oversized payloads
 - Invalid YAML or invalid OKVNS shapes
 
@@ -102,14 +129,16 @@ Import validates the full document before mutating storage. Valid imports upsert
 ```yaml
 namespaces:
   - name: users
+    description: Accounts for the admin console.
     entries:
       - name: admin
         value: secret
+        description: API key used by the admin console.
   - name: settings
     entries: []
 ```
 
-Export always returns raw YAML using the canonical `namespaces` array shape and deterministic ordering. The exported content is plain YAML, not wrapped in a markdown code fence.
+Export always returns raw YAML using the canonical `namespaces` array shape and deterministic ordering. The exported content is plain YAML, not wrapped in a markdown code fence. `description` is emitted only for namespaces and entries that have one.
 
 ## Migration From The Markdown Contract
 

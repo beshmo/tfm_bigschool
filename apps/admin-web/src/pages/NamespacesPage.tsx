@@ -10,6 +10,7 @@ export function NamespacesPage() {
   const api = useApi();
   const [namespaces, setNamespaces] = useState<NamespaceDto[]>([]);
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,8 +32,9 @@ export function NamespacesPage() {
     event.preventDefault();
     setError(null);
     try {
-      await api.createNamespace(name.trim());
+      await api.createNamespace(name.trim(), description);
       setName('');
+      setDescription('');
       await reload();
     } catch (err) {
       setError(messageOf(err));
@@ -56,6 +58,13 @@ export function NamespacesPage() {
       <form onSubmit={onCreate} aria-label="Create namespace">
         <label htmlFor="namespace-name">Namespace name</label>
         <input id="namespace-name" value={name} onChange={(event) => setName(event.target.value)} />
+        <label htmlFor="namespace-description">Description (optional)</label>
+        <textarea
+          id="namespace-description"
+          rows={2}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+        />
         <button type="submit">Create namespace</button>
       </form>
 
@@ -70,6 +79,7 @@ export function NamespacesPage() {
           {namespaces.map((namespace) => (
             <li key={namespace.name}>
               <Link to={`/namespaces/${encodeURIComponent(namespace.name)}`}>{namespace.name}</Link>
+              {namespace.description && <p>{namespace.description}</p>}
               <Timestamps createdAt={namespace.created_at} modifiedAt={namespace.modified_at} />
               <button
                 type="button"

@@ -103,6 +103,71 @@ describe('InMemoryNamespaceRepository timestamps', () => {
     expect(updated.getEntry('changing').modifiedAt > stableModified).toBe(true);
   });
 
+  it('GIVEN an entry description is updated WHEN saved THEN entry created stays stable while modified advances', async () => {
+    await seedUsers();
+    const seed = (await repository.findByName('users'))!;
+    seed.addEntry(Entry.create('k', 'v', 'original'));
+    await repository.save(seed);
+
+    const stored = (await repository.findByName('users'))!;
+    const originalCreated = stored.getEntry('k').createdAt;
+    const originalNamespaceModified = stored.modifiedAt;
+
+    stored.replaceEntry('k', Entry.create('k', 'v', 'changed'));
+    await repository.save(stored);
+
+    const updated = (await repository.findByName('users'))!;
+    const entry = updated.getEntry('k');
+    expect(entry.description).toBe('changed');
+    expect(entry.value).toBe('v');
+    expect(entry.createdAt).toBe(originalCreated);
+    expect(entry.modifiedAt > originalCreated).toBe(true);
+    expect(updated.modifiedAt > originalNamespaceModified).toBe(true);
+  });
+
+  it('GIVEN an entry description is cleared WHEN saved THEN the modified timestamp advances', async () => {
+    await seedUsers();
+    const seed = (await repository.findByName('users'))!;
+    seed.addEntry(Entry.create('k', 'v', 'docs'));
+    await repository.save(seed);
+
+    const stored = (await repository.findByName('users'))!;
+    const beforeModified = stored.getEntry('k').modifiedAt;
+
+    stored.replaceEntry('k', Entry.create('k', 'v'));
+    await repository.save(stored);
+
+    const updated = (await repository.findByName('users'))!;
+    expect(updated.getEntry('k').description).toBeUndefined();
+    expect(updated.getEntry('k').modifiedAt > beforeModified).toBe(true);
+  });
+
+  it('GIVEN a namespace description WHEN saved and read back THEN it is preserved', async () => {
+    await repository.create(Namespace.create('docs', 'the docs'));
+    const stored = (await repository.findByName('docs'))!;
+    expect(stored.description).toBe('the docs');
+
+    stored.describe('updated docs');
+    await repository.save(stored);
+    expect((await repository.findByName('docs'))?.description).toBe('updated docs');
+  });
+
+  it('GIVEN a namespace with a description WHEN renamed THEN the description is preserved', async () => {
+    await repository.create(Namespace.create('users', 'the users'));
+    await repository.rename('users', 'people');
+    expect((await repository.findByName('people'))?.description).toBe('the users');
+  });
+
+  it('GIVEN descriptions WHEN imported THEN namespace and entry descriptions are stored', async () => {
+    const incoming = Namespace.create('users', 'ns doc');
+    incoming.addEntry(Entry.create('k', 'v', 'entry doc'));
+    await repository.importNamespaces([incoming]);
+
+    const stored = (await repository.findByName('users'))!;
+    expect(stored.description).toBe('ns doc');
+    expect(stored.getEntry('k').description).toBe('entry doc');
+  });
+
   it('GIVEN an entry is deleted WHEN saved THEN the namespace modified timestamp changes', async () => {
     await seedUsers();
     const seed = (await repository.findByName('users'))!;

@@ -1,8 +1,4 @@
-## Purpose
-
-Bulk import and export of namespaces and entries via OKVNS YAML format. Supports dual-shape import (plural `namespaces` and single `namespace`) with strict schema validation, optional descriptions, atomic validation-before-mutation, deterministic ordering, and canonical export.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: YAML import supports multiple namespaces
 The system SHALL import YAML content containing one or more namespaces and their entries into durable storage. The canonical accepted shape MUST use a `namespaces` array, and the original single `namespace` shape MUST also be accepted for import compatibility. Clients MUST be able to submit YAML content either as a JSON `yaml` request field or as a multipart file field named `file` on `POST /yaml/import`. Namespace and entry `description` fields MAY be present and MUST be persisted after validation. Namespace and entry `created_at` and `modified_at` fields MAY be present in imported YAML, but their values MUST be ignored.
@@ -55,24 +51,6 @@ The YAML importer MUST allow only the expected OKVNS keys and MUST reject invali
 #### Scenario: Oversized multipart file is rejected
 - **WHEN** a client uploads a YAML file larger than the configured import payload limit through `POST /yaml/import`
 - **THEN** the system returns a safe validation error without mutating storage
-
-### Requirement: YAML import is atomic per request
-The system SHALL validate the complete YAML document before applying any imported namespace changes and SHALL commit all valid imported namespaces in a single durable storage transaction.
-
-#### Scenario: Invalid import leaves existing storage unchanged
-- **WHEN** a client imports YAML where one namespace is valid and another namespace is invalid
-- **THEN** the system rejects the import and leaves existing storage unchanged
-
-#### Scenario: Storage failure leaves existing storage unchanged
-- **WHEN** a valid YAML import begins applying namespace changes and durable storage fails before the import commits
-- **THEN** the system rejects the import and leaves existing storage unchanged
-
-### Requirement: YAML import upserts namespaces
-The system SHALL apply a valid import by replacing each imported namespace's entries when that namespace already exists and creating namespaces that do not exist.
-
-#### Scenario: Existing namespace is replaced by import
-- **WHEN** a valid YAML import contains a namespace that already exists
-- **THEN** the system replaces that namespace's entries with the imported entries
 
 ### Requirement: YAML export uses canonical multiple namespace shape
 The system SHALL export namespaces and entries from durable storage as raw YAML using a canonical `namespaces` array shape. The exported YAML MUST NOT be wrapped in a markdown code fence, and MUST include namespace and entry `created_at` and `modified_at` metadata. The exported YAML MUST include namespace and entry `description` fields when descriptions are stored.

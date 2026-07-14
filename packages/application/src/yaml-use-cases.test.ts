@@ -37,6 +37,33 @@ describe('ImportYamlUseCase', () => {
     expect(await repository.existsByName('settings')).toBe(true);
   });
 
+  it('GIVEN YAML with descriptions WHEN imported THEN they are stored and returned', async () => {
+    const yaml = `namespaces:
+  - name: users
+    description: the users
+    entries:
+      - name: admin
+        value: secret
+        description: the admin key`;
+    const result = await new ImportYamlUseCase(repository).execute(yaml);
+    expect(result[0].description).toBe('the users');
+    expect(result[0].entries[0].description).toBe('the admin key');
+    const stored = await repository.findByName('users');
+    expect(stored?.description).toBe('the users');
+    expect(stored?.getEntry('admin').description).toBe('the admin key');
+  });
+
+  it('GIVEN YAML with an invalid description WHEN imported THEN storage is untouched', async () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret
+        description: "${'x'.repeat(1001)}"`;
+    await expect(new ImportYamlUseCase(repository).execute(yaml)).rejects.toBeInstanceOf(YamlError);
+    expect(await repository.existsByName('users')).toBe(false);
+  });
+
   it('GIVEN a namespace that already exists WHEN imported THEN its entries are replaced', async () => {
     const existing = Namespace.create('users');
     existing.addEntry(Entry.create('old', 'value'));
