@@ -17,6 +17,32 @@ describe('NamespaceDetailPage', () => {
     expect(screen.getByLabelText('Value for admin')).toHaveValue('secret');
   });
 
+  it('displays namespace and entry timestamps', async () => {
+    const api = new FakeOkvnsApi();
+    api.seed([
+      {
+        name: 'users',
+        created_at: '2024-01-02T00:00:00.000Z',
+        modified_at: '2024-01-03T00:00:00.000Z',
+        entries: [
+          {
+            name: 'admin',
+            value: 'secret',
+            created_at: '2024-02-02T00:00:00.000Z',
+            modified_at: '2024-02-03T00:00:00.000Z',
+          },
+        ],
+      },
+    ]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByRole('heading', { name: 'Namespace: users' });
+
+    expect(screen.getByText('2024-01-02T00:00:00.000Z')).toBeInTheDocument();
+    expect(screen.getByText('2024-01-03T00:00:00.000Z')).toBeInTheDocument();
+    expect(screen.getByText('2024-02-02T00:00:00.000Z')).toBeInTheDocument();
+    expect(screen.getByText('2024-02-03T00:00:00.000Z')).toBeInTheDocument();
+  });
+
   it('creates a new entry', async () => {
     renderApp(seededApi(), '/namespaces/users');
     await screen.findByRole('heading', { name: 'Namespace: users' });

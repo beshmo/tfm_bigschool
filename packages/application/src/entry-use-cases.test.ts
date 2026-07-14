@@ -24,9 +24,11 @@ beforeEach(async () => {
 });
 
 describe('CreateEntryUseCase', () => {
-  it('GIVEN a valid entry WHEN created THEN it is stored', async () => {
+  it('GIVEN a valid entry WHEN created THEN it is stored with timestamps', async () => {
     const dto = await new CreateEntryUseCase(repository).execute('users', 'admin', 'secret');
-    expect(dto).toEqual({ name: 'admin', value: 'secret' });
+    expect(dto).toMatchObject({ name: 'admin', value: 'secret' });
+    expect(dto.created_at).toEqual(expect.any(String));
+    expect(dto.modified_at).toEqual(expect.any(String));
     const ns = await repository.findByName('users');
     expect(ns?.getEntry('admin').value).toBe('secret');
   });
@@ -69,12 +71,12 @@ describe('ListEntriesUseCase', () => {
 });
 
 describe('GetEntryUseCase', () => {
-  it('GIVEN an existing entry WHEN retrieved THEN it is returned', async () => {
+  it('GIVEN an existing entry WHEN retrieved THEN it is returned with timestamps', async () => {
     await new CreateEntryUseCase(repository).execute('users', 'admin', 'v');
-    expect(await new GetEntryUseCase(repository).execute('users', 'admin')).toEqual({
-      name: 'admin',
-      value: 'v',
-    });
+    const dto = await new GetEntryUseCase(repository).execute('users', 'admin');
+    expect(dto).toMatchObject({ name: 'admin', value: 'v' });
+    expect(dto.created_at).toEqual(expect.any(String));
+    expect(dto.modified_at).toEqual(expect.any(String));
   });
 
   it('GIVEN a missing namespace WHEN retrieved THEN it throws NamespaceNotFoundError', async () => {
@@ -99,14 +101,16 @@ describe('UpdateEntryUseCase', () => {
     const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', {
       value: 'new',
     });
-    expect(dto).toEqual({ name: 'admin', value: 'new' });
+    expect(dto).toMatchObject({ name: 'admin', value: 'new' });
+    expect(dto.created_at).toEqual(expect.any(String));
+    expect(dto.modified_at).toEqual(expect.any(String));
   });
 
   it('GIVEN a name-only change WHEN updated THEN the entry is re-keyed and value is kept', async () => {
     const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', {
       name: 'root',
     });
-    expect(dto).toEqual({ name: 'root', value: 'original' });
+    expect(dto).toMatchObject({ name: 'root', value: 'original' });
   });
 
   it('GIVEN both name and value WHEN updated THEN both change', async () => {
@@ -114,7 +118,7 @@ describe('UpdateEntryUseCase', () => {
       name: 'root',
       value: 'new',
     });
-    expect(dto).toEqual({ name: 'root', value: 'new' });
+    expect(dto).toMatchObject({ name: 'root', value: 'new' });
   });
 
   it('GIVEN a rename to an existing entry WHEN updated THEN it throws DuplicateEntryError', async () => {

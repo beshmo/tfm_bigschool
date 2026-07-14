@@ -138,9 +138,10 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
   it('GIVEN a storage failure during save WHEN it rolls back THEN the original entries are preserved', async () => {
     await repository.create(namespaceWith('users', [['keep', '1']]));
 
-    // Fail while re-inserting entries during save(). Because save() deletes the
-    // existing entries before inserting the new ones inside one transaction, a
-    // failed insert must roll the delete back and leave the original entry.
+    // Fail while inserting the new entry during save(). save() reconciles
+    // entries inside one transaction (deleting removed and inserting new), so a
+    // failed insert must roll the whole reconciliation back and leave the
+    // original entry.
     const failingRepository = new MysqlNamespaceRepository(
       failOnQuery(pool, (sql) => sql.startsWith('INSERT INTO entries')),
     );
@@ -152,6 +153,50 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
     const stored = await repository.findByName('users');
     expect(stored?.getEntry('keep').value).toBe('1');
     expect(stored?.hasEntry('changed')).toBe(false);
+  });
+
+  it('GIVEN a namespace WHEN read THEN it exposes ISO created/modified timestamps', async () => {
+    await repository.create(namespaceWith('users', [['admin', 'secret']]));
+
+    const stored = await repository.findByName('users');
+    const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+    expect(stored?.createdAt).toMatch(iso);
+    expect(stored?.modifiedAt).toMatch(iso);
+    expect(stored?.getEntry('admin').createdAt).toMatch(iso);
+    expect(stored?.getEntry('admin').modifiedAt).toMatch(iso);
+  });
+
+  it('GIVEN an entry renamed via save WHEN read THEN the renamed entry keeps its created timestamp', async () => {
+    await repository.create(namespaceWith('users', [['old', 'v']]));
+    const before = await repository.findByName('users');
+    const originalCreated = before!.getEntry('old').createdAt;
+
+    // Model an entry rename: same logical entry, new name, preserved created_at.
+    const renamed = Namespace.create('users');
+    const carried = Entry.rehydrate('new', 'v', originalCreated, new Date().toISOString());
+    renamed.setEntries([carried]);
+    await repository.save(renamed);
+
+    const after = await repository.findByName('users');
+    expect(after!.hasEntry('old')).toBe(false);
+    expect(after!.getEntry('new').createdAt).toBe(originalCreated);
+  });
+
+  it('GIVEN an entry value updated via save WHEN read THEN entry created is stable and namespace modified advances', async () => {
+    await repository.create(namespaceWith('users', [['admin', 'secret']]));
+    const before = await repository.findByName('users');
+    const entryCreated = before!.getEntry('admin').createdAt;
+    const namespaceModified = before!.modifiedAt;
+
+    // A second of separation guarantees a distinct MySQL TIMESTAMP.
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const changed = namespaceWith('users', [['admin', 'rotated']]);
+    await repository.save(changed);
+
+    const after = await repository.findByName('users');
+    expect(after!.getEntry('admin').value).toBe('rotated');
+    expect(after!.getEntry('admin').createdAt).toBe(entryCreated);
+    expect(after!.modifiedAt >= namespaceModified).toBe(true);
   });
 
   it('GIVEN stored data WHEN a new repository is constructed THEN the data persists', async () => {

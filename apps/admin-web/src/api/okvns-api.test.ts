@@ -27,6 +27,25 @@ describe('HttpOkvnsApi', () => {
     );
   });
 
+  it('preserves namespace and entry timestamp fields on responses', async () => {
+    const dto = {
+      name: 'users',
+      created_at: '2024-05-01T00:00:00.000Z',
+      modified_at: '2024-06-01T00:00:00.000Z',
+      entries: [
+        {
+          name: 'admin',
+          value: 'secret',
+          created_at: '2024-05-02T00:00:00.000Z',
+          modified_at: '2024-06-02T00:00:00.000Z',
+        },
+      ],
+    };
+    const fetchImpl = vi.fn(async () => jsonResponse(dto));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    expect(await api.getNamespace('users')).toEqual(dto);
+  });
+
   it('maps a safe error body into an ApiError with code and status', async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({ error: { code: 'DUPLICATE_NAMESPACE', message: 'exists' } }, 409),

@@ -21,9 +21,11 @@ beforeEach(() => {
 });
 
 describe('CreateNamespaceUseCase', () => {
-  it('GIVEN a valid new name WHEN executed THEN it stores and returns the namespace', async () => {
+  it('GIVEN a valid new name WHEN executed THEN it stores and returns the namespace with timestamps', async () => {
     const dto = await new CreateNamespaceUseCase(repository).execute('  users  ');
-    expect(dto).toEqual({ name: 'users', entries: [] });
+    expect(dto).toMatchObject({ name: 'users', entries: [] });
+    expect(dto.created_at).toEqual(expect.any(String));
+    expect(dto.modified_at).toEqual(expect.any(String));
     expect(await repository.existsByName('users')).toBe(true);
   });
 
@@ -50,12 +52,12 @@ describe('ListNamespacesUseCase', () => {
 });
 
 describe('GetNamespaceUseCase', () => {
-  it('GIVEN an existing namespace WHEN retrieved THEN it is returned', async () => {
+  it('GIVEN an existing namespace WHEN retrieved THEN it is returned with timestamps', async () => {
     await repository.save(Namespace.create('users'));
-    expect(await new GetNamespaceUseCase(repository).execute('users')).toEqual({
-      name: 'users',
-      entries: [],
-    });
+    const dto = await new GetNamespaceUseCase(repository).execute('users');
+    expect(dto).toMatchObject({ name: 'users', entries: [] });
+    expect(dto.created_at).toEqual(expect.any(String));
+    expect(dto.modified_at).toEqual(expect.any(String));
   });
 
   it('GIVEN a missing namespace WHEN retrieved THEN it throws NamespaceNotFoundError', async () => {

@@ -1,12 +1,25 @@
 import { parse as parseYaml } from 'yaml';
-import {
-  ERROR_CODES,
-  REQUEST_BODY_MAX_BYTES,
-  RESOURCE_NAME_PATTERN,
-  type EntryDto,
-  type NamespaceDto,
-} from '@okvns/shared';
+import { ERROR_CODES, REQUEST_BODY_MAX_BYTES, RESOURCE_NAME_PATTERN } from '@okvns/shared';
 import { YamlError } from './errors.js';
+
+/**
+ * Parsed entry. Import intentionally omits timestamp metadata: `created_at` and
+ * `modified_at` keys are accepted on input but ignored, because timestamps
+ * describe the target store lifecycle, not the source document.
+ */
+export interface ParsedEntry {
+  name: string;
+  value: string;
+}
+
+/** Parsed namespace, without timestamp metadata (see {@link ParsedEntry}). */
+export interface ParsedNamespace {
+  name: string;
+  entries: ParsedEntry[];
+}
+
+/** Optional timestamp-metadata keys accepted (and ignored) on import. */
+const IGNORED_METADATA_KEYS = new Set(['created_at', 'modified_at']);
 
 const invalid = (message: string): YamlError => new YamlError(ERROR_CODES.INVALID_YAML, message);
 
@@ -35,7 +48,7 @@ function normalizeName(raw: unknown, message: string): string {
   return trimmed;
 }
 
-function parseEntries(raw: unknown, namespaceName: string): EntryDto[] {
+function parseEntries(raw: unknown, namespaceName: string): ParsedEntry[] {
   if (raw === undefined) {
     return [];
   }
@@ -43,13 +56,13 @@ function parseEntries(raw: unknown, namespaceName: string): EntryDto[] {
     throw invalid(`Entries for namespace "${namespaceName}" must be an array.`);
   }
   const seen = new Set<string>();
-  const entries: EntryDto[] = [];
+  const entries: ParsedEntry[] = [];
   for (const item of raw) {
     if (!isRecord(item)) {
       throw invalid('Each entry must be an object with "name" and "value".');
     }
     for (const key of Object.keys(item)) {
-      if (key !== 'name' && key !== 'value') {
+      if (key !== 'name' && key !== 'value' && !IGNORED_METADATA_KEYS.has(key)) {
         throw invalid(`Unexpected entry key "${key}".`);
       }
     }
@@ -74,7 +87,7 @@ function parseEntries(raw: unknown, namespaceName: string): EntryDto[] {
  * document — allowlisted keys, shapes, sizes, and duplicates — before returning,
  * so callers can treat a successful parse as safe to apply atomically.
  */
-export function parseNamespacesYaml(yaml: string): NamespaceDto[] {
+export function parseNamespacesYaml(yaml: string): ParsedNamespace[] {
   if (byteLength(yaml) > REQUEST_BODY_MAX_BYTES) {
     throw invalid('YAML payload exceeds the maximum allowed size.');
   }
@@ -106,13 +119,13 @@ export function parseNamespacesYaml(yaml: string): NamespaceDto[] {
   }
 
   const seen = new Set<string>();
-  const namespaces: NamespaceDto[] = [];
+  const namespaces: ParsedNamespace[] = [];
   for (const item of rawList) {
     if (!isRecord(item)) {
       throw invalid('Each namespace must be an object with "name" and "entries".');
     }
     for (const key of Object.keys(item)) {
-      if (key !== 'name' && key !== 'entries') {
+      if (key !== 'name' && key !== 'entries' && !IGNORED_METADATA_KEYS.has(key)) {
         throw invalid(`Unexpected namespace key "${key}".`);
       }
     }

@@ -41,6 +41,23 @@ describe('NamespacesPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/i);
   });
 
+  it('displays namespace created and modified timestamps', async () => {
+    const api = new FakeOkvnsApi();
+    api.seed([
+      {
+        name: 'users',
+        entries: [],
+        created_at: '2024-05-01T00:00:00.000Z',
+        modified_at: '2024-06-01T00:00:00.000Z',
+      },
+    ]);
+    renderApp(api);
+    await screen.findByRole('link', { name: 'users' });
+
+    expect(screen.getByText('2024-05-01T00:00:00.000Z')).toBeInTheDocument();
+    expect(screen.getByText('2024-06-01T00:00:00.000Z')).toBeInTheDocument();
+  });
+
   it('deletes a namespace', async () => {
     const api = new FakeOkvnsApi();
     api.seed([{ name: 'users', entries: [] }]);

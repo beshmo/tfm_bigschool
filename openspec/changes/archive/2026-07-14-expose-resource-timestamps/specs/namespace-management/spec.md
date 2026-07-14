@@ -1,8 +1,4 @@
-## Purpose
-
-Namespace CRUD operations exposed through the REST API and admin frontend. Covers creation, listing, retrieval, rename, and deletion with validated inputs and safe error responses.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Namespace creation
 The system SHALL allow API clients and admin users to create a namespace with a valid unique name, and SHALL return namespace timestamp metadata.
@@ -54,23 +50,7 @@ The system SHALL allow API clients and admin users to update a namespace name wh
 - **WHEN** a namespace rename cannot be committed to durable storage
 - **THEN** the system leaves the original namespace and entries unchanged
 
-### Requirement: Namespace deletion
-The system SHALL allow API clients and admin users to delete a namespace and all entries inside it.
-
-#### Scenario: Delete namespace succeeds
-- **WHEN** a client deletes an existing namespace
-- **THEN** the namespace and its entries are no longer available
-
-#### Scenario: Delete missing namespace returns not found
-- **WHEN** a client deletes a namespace that does not exist
-- **THEN** the system returns a safe not-found error
-
-### Requirement: Namespace API contract
-The API SHALL expose namespace endpoints with validated DTOs, safe error response shapes, and no stack traces or implementation details in responses.
-
-#### Scenario: Invalid namespace request is rejected at boundary
-- **WHEN** a client sends an invalid namespace request body or route parameter
-- **THEN** the API returns a validation error before executing the use case
+## ADDED Requirements
 
 ### Requirement: Namespace modification timestamp semantics
 The system SHALL treat namespace `modified_at` as the last namespace-level change or entry mutation inside that namespace.

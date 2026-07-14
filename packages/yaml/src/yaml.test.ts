@@ -186,19 +186,40 @@ describe('parseNamespacesYaml', () => {
       ERROR_CODES.DUPLICATE_ENTRY,
     );
   });
+
+  it('GIVEN namespace and entry timestamp metadata WHEN parsed THEN the keys are accepted but ignored', () => {
+    const yaml = `namespaces:
+  - name: users
+    created_at: "2020-01-01T00:00:00.000Z"
+    modified_at: "2021-01-01T00:00:00.000Z"
+    entries:
+      - name: admin
+        value: secret
+        created_at: "2020-02-01T00:00:00.000Z"
+        modified_at: "2021-02-01T00:00:00.000Z"`;
+    expect(parseNamespacesYaml(yaml)).toEqual([
+      { name: 'users', entries: [{ name: 'admin', value: 'secret' }] },
+    ]);
+  });
 });
 
 describe('serializeNamespacesYaml', () => {
+  const ts = (created: string, modified: string) => ({
+    created_at: created,
+    modified_at: modified,
+  });
+
   it('GIVEN namespaces WHEN serialized THEN it emits raw canonical YAML sorted by name with no code fence', () => {
     const yaml = serializeNamespacesYaml([
       {
         name: 'zeta',
+        ...ts('2020-01-01T00:00:00.000Z', '2020-02-01T00:00:00.000Z'),
         entries: [
-          { name: 'b', value: '2' },
-          { name: 'a', value: '1' },
+          { name: 'b', value: '2', ...ts('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z') },
+          { name: 'a', value: '1', ...ts('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z') },
         ],
       },
-      { name: 'alpha', entries: [] },
+      { name: 'alpha', ...ts('2019-01-01T00:00:00.000Z', '2019-01-01T00:00:00.000Z'), entries: [] },
     ]);
     expect(yaml).not.toContain('```');
     expect(yaml.startsWith('namespaces:')).toBe(true);
@@ -213,6 +234,26 @@ describe('serializeNamespacesYaml', () => {
         ],
       },
     ]);
+  });
+
+  it('GIVEN namespaces WHEN serialized THEN each namespace and entry includes timestamp metadata', () => {
+    const yaml = serializeNamespacesYaml([
+      {
+        name: 'users',
+        ...ts('2020-01-01T00:00:00.000Z', '2020-02-01T00:00:00.000Z'),
+        entries: [
+          {
+            name: 'admin',
+            value: 'secret',
+            ...ts('2020-03-01T00:00:00.000Z', '2020-04-01T00:00:00.000Z'),
+          },
+        ],
+      },
+    ]);
+    expect(yaml).toContain('created_at: 2020-01-01T00:00:00.000Z');
+    expect(yaml).toContain('modified_at: 2020-02-01T00:00:00.000Z');
+    expect(yaml).toContain('created_at: 2020-03-01T00:00:00.000Z');
+    expect(yaml).toContain('modified_at: 2020-04-01T00:00:00.000Z');
   });
 
   it('GIVEN an empty namespace list WHEN serialized THEN it round-trips to an empty list', () => {

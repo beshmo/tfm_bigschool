@@ -16,4 +16,20 @@ export class NamespaceResponse {
     type: [EntryResponse],
   })
   entries!: EntryResponse[];
+
+  @ApiProperty({
+    description: 'When the namespace was first created.',
+    format: 'date-time',
+    example: '2026-01-01T00:00:00.000Z',
+  })
+  created_at!: string;
+
+  @ApiProperty({
+    description:
+      'When the namespace last changed — the most recent namespace-level change ' +
+      'or entry mutation inside it (aggregate freshness).',
+    format: 'date-time',
+    example: '2026-01-02T00:00:00.000Z',
+  })
+  modified_at!: string;
 }

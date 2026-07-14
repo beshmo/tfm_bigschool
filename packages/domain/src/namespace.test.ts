@@ -1,32 +1,54 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Namespace, compareNames } from './namespace.js';
 import { Entry } from './entry.js';
 import { DuplicateEntryError, EntryNotFoundError, InvalidResourceNameError } from './errors.js';
 
+const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
 describe('Namespace', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('GIVEN a valid name WHEN created THEN it is normalized and has no entries', () => {
     const ns = Namespace.create('  settings  ');
     expect(ns.name).toBe('settings');
     expect(ns.listEntries()).toEqual([]);
   });
 
+  it('GIVEN a new namespace WHEN created THEN it carries matching ISO timestamps', () => {
+    const ns = Namespace.create('settings');
+    expect(ns.createdAt).toMatch(ISO);
+    expect(ns.modifiedAt).toBe(ns.createdAt);
+  });
+
   it('GIVEN an invalid name WHEN created THEN it throws', () => {
     expect(() => Namespace.create('bad name')).toThrow(InvalidResourceNameError);
   });
 
-  it('GIVEN a namespace WHEN renamed THEN the name changes and entries are preserved', () => {
+  it('GIVEN a namespace WHEN renamed THEN the name changes, entries are preserved, and modification refreshes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
     const ns = Namespace.create('a');
     ns.addEntry(Entry.create('k', 'v'));
+    const createdAt = ns.createdAt;
+    vi.setSystemTime(new Date('2026-02-01T00:00:00.000Z'));
     ns.rename('b');
     expect(ns.name).toBe('b');
     expect(ns.listEntries().map((e) => e.name)).toEqual(['k']);
+    expect(ns.createdAt).toBe(createdAt);
+    expect(ns.modifiedAt).toBe('2026-02-01T00:00:00.000Z');
   });
 
-  it('GIVEN a new entry WHEN added THEN it is retrievable', () => {
+  it('GIVEN a new entry WHEN added THEN it is retrievable and modification refreshes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
     const ns = Namespace.create('a');
+    vi.setSystemTime(new Date('2026-03-01T00:00:00.000Z'));
     ns.addEntry(Entry.create('k', 'v'));
     expect(ns.hasEntry('k')).toBe(true);
     expect(ns.getEntry('k').value).toBe('v');
+    expect(ns.modifiedAt).toBe('2026-03-01T00:00:00.000Z');
   });
 
   it('GIVEN an existing entry name WHEN a duplicate is added THEN it throws DuplicateEntryError', () => {
@@ -52,26 +74,43 @@ describe('Namespace', () => {
     expect(() => Namespace.create('a').removeEntry('missing')).toThrow(EntryNotFoundError);
   });
 
-  it('GIVEN an existing entry WHEN removed THEN it is gone', () => {
+  it('GIVEN an existing entry WHEN removed THEN it is gone and modification refreshes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
     const ns = Namespace.create('a');
     ns.addEntry(Entry.create('k', 'v'));
+    vi.setSystemTime(new Date('2026-04-01T00:00:00.000Z'));
     ns.removeEntry('k');
     expect(ns.hasEntry('k')).toBe(false);
+    expect(ns.modifiedAt).toBe('2026-04-01T00:00:00.000Z');
   });
 
-  it('GIVEN an entry WHEN replaced with a new value THEN the value updates', () => {
+  it('GIVEN an entry WHEN replaced with a new value THEN the value updates, creation is preserved, and modification refreshes', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
     const ns = Namespace.create('a');
     ns.addEntry(Entry.create('k', 'v'));
+    const originalCreated = ns.getEntry('k').createdAt;
+    vi.setSystemTime(new Date('2026-05-01T00:00:00.000Z'));
     ns.replaceEntry('k', Entry.create('k', 'v2'));
     expect(ns.getEntry('k').value).toBe('v2');
+    expect(ns.getEntry('k').createdAt).toBe(originalCreated);
+    expect(ns.getEntry('k').modifiedAt).toBe('2026-05-01T00:00:00.000Z');
+    expect(ns.modifiedAt).toBe('2026-05-01T00:00:00.000Z');
   });
 
-  it('GIVEN an entry WHEN replaced with a new name THEN it is re-keyed', () => {
+  it('GIVEN an entry WHEN replaced with a new name THEN it is re-keyed and its creation time is preserved', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
     const ns = Namespace.create('a');
     ns.addEntry(Entry.create('k', 'v'));
+    const originalCreated = ns.getEntry('k').createdAt;
+    vi.setSystemTime(new Date('2026-06-01T00:00:00.000Z'));
     ns.replaceEntry('k', Entry.create('k2', 'v'));
     expect(ns.hasEntry('k')).toBe(false);
     expect(ns.getEntry('k2').value).toBe('v');
+    expect(ns.getEntry('k2').createdAt).toBe(originalCreated);
+    expect(ns.getEntry('k2').modifiedAt).toBe('2026-06-01T00:00:00.000Z');
   });
 
   it('GIVEN a missing original entry WHEN replaced THEN it throws EntryNotFoundError', () => {
@@ -108,21 +147,63 @@ describe('Namespace', () => {
     );
   });
 
+  it('GIVEN stored state WHEN rehydrated THEN name, timestamps, and entries are restored without a fresh mutation', () => {
+    const entry = Entry.rehydrate('k', 'v', '2020-01-01T00:00:00.000Z', '2020-06-01T00:00:00.000Z');
+    const ns = Namespace.rehydrate('a', '2019-01-01T00:00:00.000Z', '2021-01-01T00:00:00.000Z', [
+      entry,
+    ]);
+    expect(ns.name).toBe('a');
+    expect(ns.createdAt).toBe('2019-01-01T00:00:00.000Z');
+    expect(ns.modifiedAt).toBe('2021-01-01T00:00:00.000Z');
+    expect(ns.getEntry('k').value).toBe('v');
+  });
+
+  it('GIVEN a namespace WHEN stamped THEN its timestamps are overwritten', () => {
+    const ns = Namespace.create('a');
+    ns.stamp('2020-01-01T00:00:00.000Z', '2022-01-01T00:00:00.000Z');
+    expect(ns.createdAt).toBe('2020-01-01T00:00:00.000Z');
+    expect(ns.modifiedAt).toBe('2022-01-01T00:00:00.000Z');
+  });
+
+  it('GIVEN a namespace WHEN cloned THEN it copies name, timestamps, and independent entries', () => {
+    const ns = Namespace.rehydrate('a', '2019-01-01T00:00:00.000Z', '2021-01-01T00:00:00.000Z', [
+      Entry.rehydrate('k', 'v', '2020-01-01T00:00:00.000Z', '2020-06-01T00:00:00.000Z'),
+    ]);
+    const copy = ns.clone();
+    expect(copy.toDto()).toEqual(ns.toDto());
+    // Mutating the clone does not affect the original.
+    copy.addEntry(Entry.create('extra', '1'));
+    expect(ns.hasEntry('extra')).toBe(false);
+  });
+
   it('GIVEN two names WHEN compared THEN ordering is deterministic', () => {
     expect(compareNames('a', 'b')).toBe(-1);
     expect(compareNames('b', 'a')).toBe(1);
     expect(compareNames('a', 'a')).toBe(0);
   });
 
-  it('GIVEN a namespace WHEN converted to DTO THEN entries are sorted and mapped', () => {
-    const ns = Namespace.create('a');
-    ns.addEntry(Entry.create('b', '2'));
-    ns.addEntry(Entry.create('a', '1'));
+  it('GIVEN a namespace WHEN converted to DTO THEN entries are sorted and timestamps are exposed', () => {
+    const ns = Namespace.rehydrate('a', '2019-01-01T00:00:00.000Z', '2021-01-01T00:00:00.000Z', [
+      Entry.rehydrate('b', '2', '2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z'),
+      Entry.rehydrate('a', '1', '2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z'),
+    ]);
     expect(ns.toDto()).toEqual({
       name: 'a',
+      created_at: '2019-01-01T00:00:00.000Z',
+      modified_at: '2021-01-01T00:00:00.000Z',
       entries: [
-        { name: 'a', value: '1' },
-        { name: 'b', value: '2' },
+        {
+          name: 'a',
+          value: '1',
+          created_at: '2020-01-01T00:00:00.000Z',
+          modified_at: '2020-01-01T00:00:00.000Z',
+        },
+        {
+          name: 'b',
+          value: '2',
+          created_at: '2020-01-01T00:00:00.000Z',
+          modified_at: '2020-01-01T00:00:00.000Z',
+        },
       ],
     });
   });

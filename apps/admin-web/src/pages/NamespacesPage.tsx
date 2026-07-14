@@ -4,6 +4,7 @@ import type { NamespaceDto } from '@okvns/shared';
 import { useApi } from '../api/api-context';
 import { messageOf } from '../api/error-message';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { Timestamps } from '../components/Timestamps';
 
 export function NamespacesPage() {
   const api = useApi();
@@ -69,6 +70,7 @@ export function NamespacesPage() {
           {namespaces.map((namespace) => (
             <li key={namespace.name}>
               <Link to={`/namespaces/${encodeURIComponent(namespace.name)}`}>{namespace.name}</Link>
+              <Timestamps createdAt={namespace.created_at} modifiedAt={namespace.modified_at} />
               <button
                 type="button"
                 aria-label={`Delete namespace ${namespace.name}`}

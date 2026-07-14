@@ -10,12 +10,23 @@
 export interface EntryDto {
   name: string;
   value: string;
+  /** ISO 8601 timestamp of when the entry was first created. */
+  created_at: string;
+  /** ISO 8601 timestamp of when the entry was last modified. */
+  modified_at: string;
 }
 
 /** Serialized representation of a namespace as returned by the API. */
 export interface NamespaceDto {
   name: string;
   entries: EntryDto[];
+  /** ISO 8601 timestamp of when the namespace was first created. */
+  created_at: string;
+  /**
+   * ISO 8601 timestamp of the last namespace-level change or entry mutation
+   * inside the namespace (aggregate freshness).
+   */
+  modified_at: string;
 }
 
 /** Safe API error shape. Never contains stack traces or implementation details. */
