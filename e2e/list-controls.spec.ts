@@ -59,6 +59,7 @@ test('namespace list page size, ordering, and filtering', async ({ page }) => {
   for (const name of namespaceNames) {
     await page.getByLabel('Filter by name').fill(name);
     await page.getByRole('button', { name: `Delete namespace ${name}` }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
     await expect(page.getByRole('link', { name, exact: true })).toHaveCount(0);
   }
 });
@@ -68,7 +69,7 @@ test('entry list page size, ordering, and filtering', async ({ page }) => {
   await page.getByLabel('Namespace name').fill(entriesNamespace);
   await page.getByRole('button', { name: 'Create namespace' }).click();
   await page.getByRole('link', { name: entriesNamespace, exact: true }).click();
-  await expect(page.getByRole('heading', { name: `Namespace: ${entriesNamespace}` })).toBeVisible();
+  await expect(page.getByRole('heading', { name: entriesNamespace })).toBeVisible();
 
   const entries: Array<{ name: string; envDependent: boolean }> = [
     { name: 'db-host', envDependent: true },
@@ -82,35 +83,36 @@ test('entry list page size, ordering, and filtering', async ({ page }) => {
       await page.getByLabel('Environment-dependent', { exact: true }).check();
     }
     await page.getByRole('button', { name: 'Add entry' }).click();
-    await expect(page.getByLabel(`Value for ${entry.name}`)).toBeVisible();
+    await expect(page.getByRole('button', { name: `Edit entry ${entry.name}` })).toBeVisible();
   }
 
   await expect(page.getByText(/Page 1 of 1 \(3 total\)/)).toBeVisible();
 
   // Filtering by name is applied by the API.
   await page.getByLabel('Filter by name').fill('db');
-  await expect(page.getByLabel('Value for db-host')).toBeVisible();
-  await expect(page.getByLabel('Value for retries')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Edit entry db-host' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit entry retries' })).toHaveCount(0);
   await expect(page.getByText(/Page 1 of 1 \(2 total\)/)).toBeVisible();
   await page.getByLabel('Filter by name').fill('');
 
   // The environment-dependence filter requests an API-filtered entry list.
   await page.getByLabel('Show only environment-dependent entries').check();
-  await expect(page.getByLabel('Value for db-host')).toBeVisible();
-  await expect(page.getByLabel('Value for db-port')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Edit entry db-host' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit entry db-port' })).toHaveCount(0);
   await expect(page.getByText(/Page 1 of 1 \(1 total\)/)).toBeVisible();
   await page.getByLabel('Show only environment-dependent entries').uncheck();
 
   // Ordering by environment-dependence puts independent entries first ascending.
   await page.getByLabel('Order by').selectOption('env_dependent');
-  await expect(page.getByRole('textbox', { name: /^Value for/ })).toHaveCount(3);
+  await expect(page.getByRole('button', { name: /^Edit entry/ })).toHaveCount(3);
   await page.getByLabel('Direction').selectOption('desc');
-  await expect(page.getByLabel('Value for db-host')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit entry db-host' })).toBeVisible();
 
   // Page size is selectable from the allowlisted choices.
   await page.getByLabel('Per page').selectOption('100');
   await expect(page.getByText(/Page 1 of 1 \(3 total\)/)).toBeVisible();
 
   await page.getByRole('button', { name: `Delete namespace ${entriesNamespace}` }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByRole('heading', { name: 'Namespaces' })).toBeVisible();
 });

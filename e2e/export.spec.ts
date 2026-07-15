@@ -24,7 +24,7 @@ test('export YAML for all namespaces and for a selected namespace', async ({ pag
 
   // Export all
   await page.getByRole('button', { name: 'Export all namespaces' }).click();
-  const all = page.getByLabel('Exported YAML');
+  const all = page.getByLabel('Output');
   await expect(all).toContainText(nsA);
   await expect(all).toContainText(nsB);
   await expect(all).toContainText('description: exported description a');
@@ -32,7 +32,7 @@ test('export YAML for all namespaces and for a selected namespace', async ({ pag
   // Export a selected namespace only
   await page.getByLabel('Namespace', { exact: true }).selectOption(nsA);
   await page.getByRole('button', { name: 'Export selected namespace' }).click();
-  const one = page.getByLabel('Exported YAML');
+  const one = page.getByLabel('Output');
   await expect(one).toContainText(nsA);
   await expect(one).not.toContainText(nsB);
   await expect(one).toContainText('description: exported description a');
