@@ -1,8 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FakeOkvnsApi } from '../test/fake-api';
 import { renderApp } from '../test/render';
+
+/** Answers the confirmation dialog that every delete now opens. */
+async function confirmDelete() {
+  const dialog = within(screen.getByRole('alertdialog'));
+  await userEvent.click(dialog.getByRole('button', { name: 'Delete' }));
+}
 
 describe('NamespacesPage', () => {
   it('lists existing namespaces in order', async () => {
@@ -54,8 +60,10 @@ describe('NamespacesPage', () => {
     renderApp(api);
     await screen.findByRole('link', { name: 'users' });
 
-    expect(screen.getByText('2024-05-01T00:00:00.000Z')).toBeInTheDocument();
-    expect(screen.getByText('2024-06-01T00:00:00.000Z')).toBeInTheDocument();
+    // Dates render in the design's format; the ISO instant stays machine-readable
+    // on the <time> element behind it.
+    expect(screen.getByText('May 1, 2024')).toHaveAttribute('datetime', '2024-05-01T00:00:00.000Z');
+    expect(screen.getByText('Jun 1, 2024')).toHaveAttribute('datetime', '2024-06-01T00:00:00.000Z');
   });
 
   it('creates a namespace with a description and shows it, resetting the form', async () => {
@@ -94,14 +102,32 @@ describe('NamespacesPage', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 
-  it('deletes a namespace', async () => {
+  it('deletes a namespace once the deletion is confirmed', async () => {
     const api = new FakeOkvnsApi();
     api.seed([{ name: 'users', entries: [] }]);
     renderApp(api);
     await screen.findByRole('link', { name: 'users' });
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete namespace users' }));
+    await confirmDelete();
+
     await waitFor(() => expect(screen.queryByRole('link', { name: 'users' })).toBeNull());
+  });
+
+  it('keeps a namespace when the delete confirmation is cancelled', async () => {
+    const api = new FakeOkvnsApi();
+    const deleteNamespace = vi.spyOn(api, 'deleteNamespace');
+    api.seed([{ name: 'users', entries: [] }]);
+    renderApp(api);
+    await screen.findByRole('link', { name: 'users' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete namespace users' }));
+    await userEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }),
+    );
+
+    expect(deleteNamespace).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'users' })).toBeInTheDocument();
   });
 });
 
@@ -269,6 +295,7 @@ describe('NamespacesPage list controls', () => {
     await screen.findByRole('link', { name: 'ns-011' });
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete namespace ns-011' }));
+    await confirmDelete();
 
     expect(await screen.findByRole('link', { name: 'ns-001' })).toBeInTheDocument();
     expect(screen.getByText(/Page 1 of 1 \(10 total\)/)).toBeInTheDocument();

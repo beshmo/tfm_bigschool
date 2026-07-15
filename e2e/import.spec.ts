@@ -27,8 +27,8 @@ test('import YAML containing multiple namespaces and entries', async ({ page }) 
   await page.getByRole('button', { name: 'Import', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Imported namespaces' })).toBeVisible();
-  await expect(page.getByRole('listitem').filter({ hasText: nsA })).toBeVisible();
-  await expect(page.getByRole('listitem').filter({ hasText: nsB })).toBeVisible();
+  await expect(page.getByRole('cell', { name: nsA })).toBeVisible();
+  await expect(page.getByRole('cell', { name: nsB })).toBeVisible();
 
   // Verify the imported namespaces are now listed on the home page.
   await page.getByRole('link', { name: 'Namespaces', exact: true }).click();
@@ -39,6 +39,8 @@ test('import YAML containing multiple namespaces and entries', async ({ page }) 
   await expect(page.getByLabel('Description (optional)', { exact: true })).toHaveValue(
     'imported namespace a',
   );
+  await expect(page.getByRole('cell', { name: 'imported admin key' })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit entry admin' }).click();
   await expect(page.getByLabel('Description for admin')).toHaveValue('imported admin key');
 });
 
@@ -58,7 +60,7 @@ test('import YAML from an uploaded file', async ({ page }) => {
   await page.getByRole('button', { name: 'Import file' }).click();
 
   await expect(page.getByRole('heading', { name: 'Imported namespaces' })).toBeVisible();
-  await expect(page.getByRole('listitem').filter({ hasText: nsFile })).toBeVisible();
+  await expect(page.getByRole('cell', { name: nsFile })).toBeVisible();
 
   // Verify the imported namespace is now listed on the home page.
   await page.getByRole('link', { name: 'Namespaces', exact: true }).click();

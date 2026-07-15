@@ -12,35 +12,35 @@ test('entry CRUD workflow within a namespace', async ({ page }) => {
   await page.getByLabel('Namespace name').fill(ns);
   await page.getByRole('button', { name: 'Create namespace' }).click();
   await page.getByRole('link', { name: ns, exact: true }).click();
-  await expect(page.getByRole('heading', { name: `Namespace: ${ns}` })).toBeVisible();
+  await expect(page.getByRole('heading', { name: ns })).toBeVisible();
 
   // Create entry (with a description)
   await page.getByLabel('Entry name').fill('admin');
   await page.getByLabel('Entry value').fill('secret');
   await page.getByLabel('Entry description (optional)').fill('the admin key');
   await page.getByRole('button', { name: 'Add entry' }).click();
-  await expect(page.getByLabel('Value for admin')).toHaveValue('secret');
-  await expect(page.getByLabel('Description for admin')).toHaveValue('the admin key');
+  await expect(page.getByRole('cell', { name: 'secret' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'the admin key' })).toBeVisible();
 
-  // Update entry value, preserving the description. `Save` is exact so it does
-  // not also match the namespace's "Save description" button.
+  // Update the entry's value through the edit dialog, preserving its description.
+  await page.getByRole('button', { name: 'Edit entry admin' }).click();
   await page.getByLabel('Value for admin').fill('rotated');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.getByLabel('Value for admin')).toHaveValue('rotated');
-  await expect(page.getByLabel('Description for admin')).toHaveValue('the admin key');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('cell', { name: 'rotated', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'the admin key' })).toBeVisible();
 
-  // Update entry description. Reload first so the save above has fully settled:
-  // its reload() remounts the entry list, which would otherwise discard text
-  // typed into the (uncontrolled) description field. This also proves the
-  // description survived a fresh page load.
+  // Update the entry's description. Reload first to prove the value above
+  // survived a fresh page load rather than only living in client state.
   await page.reload();
-  await expect(page.getByLabel('Description for admin')).toHaveValue('the admin key');
+  await expect(page.getByRole('cell', { name: 'rotated', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit entry admin' }).click();
   await page.getByLabel('Description for admin').fill('rotated admin key');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.locator('p', { hasText: 'rotated admin key' })).toBeVisible();
-  await expect(page.getByLabel('Value for admin')).toHaveValue('rotated');
+  await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('cell', { name: 'rotated admin key' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'rotated', exact: true })).toBeVisible();
 
-  // Delete entry
+  // Delete entry, confirming the destructive dialog
   await page.getByRole('button', { name: 'Delete entry admin' }).click();
-  await expect(page.getByLabel('Value for admin')).toHaveCount(0);
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByRole('button', { name: 'Edit entry admin' })).toHaveCount(0);
 });

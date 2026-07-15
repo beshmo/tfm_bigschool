@@ -1,4 +1,5 @@
 import type { PaginatedResultDto } from '@okvns/shared';
+import { Icon } from './Icon';
 
 /**
  * Page navigation driven entirely by the API's pagination metadata — the page
@@ -15,26 +16,32 @@ export function Pagination<T>({
 }) {
   const { page, total_pages: totalPages, total_items: totalItems } = result;
   return (
-    <nav aria-label={`${label} pagination`}>
-      <button
-        type="button"
-        aria-label={`Previous page of ${label}`}
-        disabled={page <= 1}
-        onClick={() => onPage(page - 1)}
-      >
-        Previous
-      </button>
-      <span>
+    <nav className="pagination" aria-label={`${label} pagination`}>
+      <span className="count">
         Page {page} of {totalPages} ({totalItems} total)
       </span>
-      <button
-        type="button"
-        aria-label={`Next page of ${label}`}
-        disabled={page >= totalPages}
-        onClick={() => onPage(page + 1)}
-      >
-        Next
-      </button>
+      <div className="btns">
+        <button
+          type="button"
+          className="btn btn-secondary"
+          aria-label={`Previous page of ${label}`}
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+        >
+          <Icon name="chevronLeft" />
+          Previous
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          aria-label={`Next page of ${label}`}
+          disabled={page >= totalPages}
+          onClick={() => onPage(page + 1)}
+        >
+          Next
+          <Icon name="chevronRight" />
+        </button>
+      </div>
     </nav>
   );
 }

@@ -43,55 +43,68 @@ export function ListControls<S extends string>({
   onChange: (changes: Partial<ListQueryState<S>>) => void;
 }) {
   return (
-    <div role="group" aria-label={`Filter and order ${label}`}>
-      <label htmlFor={`${idPrefix}-filter-name`}>Filter by name</label>
-      <input
-        id={`${idPrefix}-filter-name`}
-        value={query.name ?? ''}
-        onChange={(event) =>
-          // A cleared box means "no filter", not "match the empty string".
-          onChange({ name: event.target.value || undefined })
-        }
-      />
+    <div className="toolbar" role="group" aria-label={`Filter and order ${label}`}>
+      <div className="field grow">
+        <label htmlFor={`${idPrefix}-filter-name`}>Filter by name</label>
+        <input
+          className="input"
+          id={`${idPrefix}-filter-name`}
+          placeholder={`Search ${label}…`}
+          value={query.name ?? ''}
+          onChange={(event) =>
+            // A cleared box means "no filter", not "match the empty string".
+            onChange({ name: event.target.value || undefined })
+          }
+        />
+      </div>
 
-      <label htmlFor={`${idPrefix}-sort`}>Order by</label>
-      <select
-        id={`${idPrefix}-sort`}
-        value={query.sort}
-        onChange={(event) => onChange({ sort: event.target.value as S })}
-      >
-        {sortFields.map((field) => (
-          <option key={field} value={field}>
-            {SORT_LABELS[field] ?? field}
-          </option>
-        ))}
-      </select>
+      <div className="field">
+        <label htmlFor={`${idPrefix}-sort`}>Order by</label>
+        <select
+          className="input"
+          id={`${idPrefix}-sort`}
+          value={query.sort}
+          onChange={(event) => onChange({ sort: event.target.value as S })}
+        >
+          {sortFields.map((field) => (
+            <option key={field} value={field}>
+              {SORT_LABELS[field] ?? field}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <label htmlFor={`${idPrefix}-direction`}>Direction</label>
-      <select
-        id={`${idPrefix}-direction`}
-        value={query.direction}
-        onChange={(event) => onChange({ direction: event.target.value as SortDirection })}
-      >
-        {SORT_DIRECTIONS.map((direction) => (
-          <option key={direction} value={direction}>
-            {DIRECTION_LABELS[direction]}
-          </option>
-        ))}
-      </select>
+      <div className="field">
+        <label htmlFor={`${idPrefix}-direction`}>Direction</label>
+        <select
+          className="input"
+          id={`${idPrefix}-direction`}
+          value={query.direction}
+          onChange={(event) => onChange({ direction: event.target.value as SortDirection })}
+        >
+          {SORT_DIRECTIONS.map((direction) => (
+            <option key={direction} value={direction}>
+              {DIRECTION_LABELS[direction]}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <label htmlFor={`${idPrefix}-page-size`}>Per page</label>
-      <select
-        id={`${idPrefix}-page-size`}
-        value={query.page_size}
-        onChange={(event) => onChange({ page_size: Number(event.target.value) as PageSize })}
-      >
-        {pageSizes.map((size) => (
-          <option key={size} value={size}>
-            {size}
-          </option>
-        ))}
-      </select>
+      <div className="field">
+        <label htmlFor={`${idPrefix}-page-size`}>Per page</label>
+        <select
+          className="input"
+          id={`${idPrefix}-page-size`}
+          value={query.page_size}
+          onChange={(event) => onChange({ page_size: Number(event.target.value) as PageSize })}
+        >
+          {pageSizes.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
