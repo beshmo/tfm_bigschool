@@ -53,6 +53,36 @@ describe('ImportYamlUseCase', () => {
     expect(stored?.getEntry('admin').description).toBe('the admin key');
   });
 
+  it('GIVEN YAML with env_dependent WHEN imported THEN it is stored and returned', async () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: db-host
+        value: localhost
+        env_dependent: true
+      - name: retries
+        value: "3"`;
+    const result = await new ImportYamlUseCase(repository).execute(yaml);
+    expect(result[0].entries).toMatchObject([
+      { name: 'db-host', env_dependent: true },
+      { name: 'retries', env_dependent: false },
+    ]);
+    const stored = await repository.findByName('users');
+    expect(stored?.getEntry('db-host').envDependent).toBe(true);
+    expect(stored?.getEntry('retries').envDependent).toBe(false);
+  });
+
+  it('GIVEN YAML with a non-boolean env_dependent WHEN imported THEN storage is untouched', async () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret
+        env_dependent: "true"`;
+    await expect(new ImportYamlUseCase(repository).execute(yaml)).rejects.toBeInstanceOf(YamlError);
+    expect(await repository.existsByName('users')).toBe(false);
+  });
+
   it('GIVEN YAML with an invalid description WHEN imported THEN storage is untouched', async () => {
     const yaml = `namespaces:
   - name: users

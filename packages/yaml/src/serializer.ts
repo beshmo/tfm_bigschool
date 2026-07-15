@@ -6,8 +6,10 @@ import { compareNames, type NamespaceDto } from '@okvns/shared';
  * `namespaces` array shape, with namespaces and entries sorted by name for
  * deterministic output. Namespace and entry `created_at`/`modified_at` timestamp
  * metadata is included so exported YAML is a fuller snapshot, and `description`
- * is emitted only when one is stored. The result is plain YAML, not wrapped in a
- * code fence.
+ * is emitted only when one is stored. Entry `env_dependent` is emitted
+ * unconditionally, including when `false`, so a reader never has to infer the
+ * flag from its absence when auditing an export. The result is plain YAML, not
+ * wrapped in a code fence.
  */
 export function serializeNamespacesYaml(namespaces: NamespaceDto[]): string {
   const sorted = [...namespaces]
@@ -22,6 +24,7 @@ export function serializeNamespacesYaml(namespaces: NamespaceDto[]): string {
           name: entry.name,
           value: entry.value,
           ...(entry.description === undefined ? {} : { description: entry.description }),
+          env_dependent: entry.env_dependent,
           created_at: entry.created_at,
           modified_at: entry.modified_at,
         })),

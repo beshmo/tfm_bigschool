@@ -16,23 +16,23 @@ and migration notes described below.
 
 ## API Endpoints
 
-| Method | Path                               | Purpose                                                                 |
-| ------ | ---------------------------------- | ----------------------------------------------------------------------- |
-| GET    | `/health`                          | Liveness probe.                                                         |
-| GET    | `/ready`                           | Readiness probe.                                                        |
-| GET    | `/namespaces`                      | List namespaces.                                                        |
-| POST   | `/namespaces`                      | Create a namespace (`{ "name": "...", "description"? }`).               |
-| GET    | `/namespaces/:name`                | Get a namespace with its entries.                                       |
-| PUT    | `/namespaces/:name`                | Update a namespace (`{ "name"?, "description"? }`).                     |
-| DELETE | `/namespaces/:name`                | Delete a namespace.                                                     |
-| GET    | `/namespaces/:name/entries`        | List entries in a namespace.                                            |
-| POST   | `/namespaces/:name/entries`        | Create an entry (`{ "name": "...", "value": "...", "description"? }`).  |
-| GET    | `/namespaces/:name/entries/:entry` | Get an entry.                                                           |
-| PUT    | `/namespaces/:name/entries/:entry` | Update an entry (`{ "name"?, "value"?, "description"? }`).              |
-| DELETE | `/namespaces/:name/entries/:entry` | Delete an entry.                                                        |
-| POST   | `/yaml/import`                     | Import YAML (`{ "yaml": "..." }` JSON, or multipart file field `file`). |
-| GET    | `/yaml/export`                     | Export all namespaces as YAML (`{ "yaml": "..." }`).                    |
-| GET    | `/yaml/export/:name`               | Export a single namespace as YAML (`{ "yaml": "..." }`).                |
+| Method | Path                               | Purpose                                                                                  |
+| ------ | ---------------------------------- | ---------------------------------------------------------------------------------------- |
+| GET    | `/health`                          | Liveness probe.                                                                          |
+| GET    | `/ready`                           | Readiness probe.                                                                         |
+| GET    | `/namespaces`                      | List namespaces.                                                                         |
+| POST   | `/namespaces`                      | Create a namespace (`{ "name": "...", "description"? }`).                                |
+| GET    | `/namespaces/:name`                | Get a namespace with its entries.                                                        |
+| PUT    | `/namespaces/:name`                | Update a namespace (`{ "name"?, "description"? }`).                                      |
+| DELETE | `/namespaces/:name`                | Delete a namespace.                                                                      |
+| GET    | `/namespaces/:name/entries`        | List entries in a namespace.                                                             |
+| POST   | `/namespaces/:name/entries`        | Create an entry (`{ "name": "...", "value": "...", "description"?, "env_dependent"? }`). |
+| GET    | `/namespaces/:name/entries/:entry` | Get an entry.                                                                            |
+| PUT    | `/namespaces/:name/entries/:entry` | Update an entry (`{ "name"?, "value"?, "description"?, "env_dependent"? }`).             |
+| DELETE | `/namespaces/:name/entries/:entry` | Delete an entry.                                                                         |
+| POST   | `/yaml/import`                     | Import YAML (`{ "yaml": "..." }` JSON, or multipart file field `file`).                  |
+| GET    | `/yaml/export`                     | Export all namespaces as YAML (`{ "yaml": "..." }`).                                     |
+| GET    | `/yaml/export/:name`               | Export a single namespace as YAML (`{ "yaml": "..." }`).                                 |
 
 ## Names
 
@@ -64,6 +64,25 @@ documentation about what the resource is for.
 - Changing a description counts as a modification: it refreshes the resource's
   `modified_at`, and an entry description change also refreshes its namespace's
   aggregate `modified_at`.
+
+## Environment-dependent entries
+
+Entries carry an `env_dependent` boolean marking a value that is only valid in
+one deployment environment, so it can be found and reviewed after a namespace is
+exported from one environment and imported into another.
+
+- The marker is metadata only. OKVNS never rewrites, substitutes, or validates
+  the value it marks; adjusting a flagged value stays an explicit admin action.
+- It is always present in responses. Omitting it on create stores `false`, and
+  entries stored before the field existed read back as `false`, so clients never
+  have to distinguish missing from false.
+- Only booleans are accepted. A non-boolean — including a quoted `"true"` in a
+  hand-edited YAML file — is rejected at the API and YAML boundaries with
+  `VALIDATION_ERROR` / `INVALID_YAML` before anything is stored.
+- On update, an omitted `env_dependent` leaves the stored value unchanged; send
+  `false` to clear the marker.
+- Changing the marker counts as a modification: it refreshes the entry's
+  `modified_at` and its namespace's aggregate `modified_at`.
 
 ## Error Shape
 
@@ -104,12 +123,13 @@ Only these keys are allowed:
 
 - Root: `namespaces` or `namespace`, but not both
 - Namespace object: `name`, `entries`, optional `description`
-- Entry object: `name`, `value`, optional `description`
+- Entry object: `name`, `value`, optional `description`, optional `env_dependent`
 
-Imported descriptions are user-authored data and are persisted (unlike
-`created_at`/`modified_at`, which are accepted but ignored). They follow the same
-rules as the API: strings of at most 1000 characters, with blanks normalized to
-no description.
+Imported descriptions and `env_dependent` markers are user-authored data and are
+persisted (unlike `created_at`/`modified_at`, which are accepted but ignored).
+They follow the same rules as the API: descriptions are strings of at most 1000
+characters with blanks normalized to no description, and `env_dependent` must be
+a boolean, defaulting to `false` when omitted.
 
 The importer rejects:
 
@@ -119,6 +139,7 @@ The importer rejects:
 - Invalid names
 - Non-string values
 - Non-string or oversized descriptions
+- Non-boolean entry `env_dependent` values
 - Oversized payloads
 - Invalid YAML or invalid OKVNS shapes
 
@@ -134,11 +155,15 @@ namespaces:
       - name: admin
         value: secret
         description: API key used by the admin console.
+        env_dependent: false
+      - name: db-host
+        value: db.prod.internal
+        env_dependent: true
   - name: settings
     entries: []
 ```
 
-Export always returns raw YAML using the canonical `namespaces` array shape and deterministic ordering. The exported content is plain YAML, not wrapped in a markdown code fence. `description` is emitted only for namespaces and entries that have one.
+Export always returns raw YAML using the canonical `namespaces` array shape and deterministic ordering. The exported content is plain YAML, not wrapped in a markdown code fence. `description` is emitted only for namespaces and entries that have one, while entry `env_dependent` is emitted for every entry — including `false` — so an exported file can be audited for environment-specific values without inferring anything from an absent key.
 
 ## Migration From The Markdown Contract
 

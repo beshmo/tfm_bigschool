@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Pool, PoolConnection } from 'mysql2/promise';
+import type { Pool, PoolConnection, ResultSetHeader } from 'mysql2/promise';
 import { DuplicateNamespaceError, Entry, Namespace, NamespaceNotFoundError } from '@okvns/domain';
 import { mysqlTestAvailable, useMysqlTestSchema } from '../../../test/mysql-test-db';
 import { MysqlNamespaceRepository } from './mysql-namespace-repository';
@@ -204,7 +204,7 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
     namespace.setEntries([Entry.create('admin', 'secret', 'the admin key')]);
     await repository.create(namespace);
 
-    const restarted = new MysqlNamespaceRepository(pool);
+    const restarted = new MysqlNamespaceRepository(getPool());
     const stored = await restarted.findByName('users');
     expect(stored?.description).toBe('the users namespace');
     expect(stored?.getEntry('admin').description).toBe('the admin key');
@@ -285,6 +285,87 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
     const stored = await repository.findByName('users');
     expect(stored?.description).toBe('ns doc');
     expect(stored?.getEntry('admin').description).toBe('entry doc');
+  });
+
+  it('GIVEN env_dependent entries WHEN created THEN the flags survive a repository restart', async () => {
+    const seed = Namespace.create('users');
+    seed.setEntries([
+      Entry.create('db-host', 'localhost', undefined, true),
+      Entry.create('retries', '3'),
+    ]);
+    await repository.create(seed);
+
+    const stored = await new MysqlNamespaceRepository(getPool()).findByName('users');
+    expect(stored?.getEntry('db-host').envDependent).toBe(true);
+    expect(stored?.getEntry('retries').envDependent).toBe(false);
+  });
+
+  it('GIVEN env_dependent entries WHEN listed THEN the flags are included', async () => {
+    const seed = Namespace.create('users');
+    seed.setEntries([Entry.create('db-host', 'localhost', undefined, true)]);
+    await repository.create(seed);
+
+    const listed = await repository.list();
+    expect(listed[0].getEntry('db-host').envDependent).toBe(true);
+  });
+
+  it('GIVEN an entry env_dependent-only change WHEN saved THEN entry created is stable and modified advances', async () => {
+    const seed = Namespace.create('users');
+    seed.setEntries([Entry.create('admin', 'secret')]);
+    await repository.create(seed);
+    const before = await repository.findByName('users');
+    const entryCreated = before!.getEntry('admin').createdAt;
+    const entryModified = before!.getEntry('admin').modifiedAt;
+
+    // A second of separation guarantees a distinct MySQL TIMESTAMP.
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const changed = Namespace.create('users');
+    changed.setEntries([Entry.create('admin', 'secret', undefined, true)]);
+    await repository.save(changed);
+
+    const after = await repository.findByName('users');
+    expect(after!.getEntry('admin').envDependent).toBe(true);
+    expect(after!.getEntry('admin').value).toBe('secret');
+    expect(after!.getEntry('admin').createdAt).toBe(entryCreated);
+    expect(after!.getEntry('admin').modifiedAt > entryModified).toBe(true);
+  });
+
+  it('GIVEN an env-dependent entry WHEN the flag is cleared via save THEN it reads back as false', async () => {
+    const seed = Namespace.create('users');
+    seed.setEntries([Entry.create('admin', 'secret', undefined, true)]);
+    await repository.create(seed);
+
+    const changed = Namespace.create('users');
+    changed.setEntries([Entry.create('admin', 'secret')]);
+    await repository.save(changed);
+
+    expect((await repository.findByName('users'))?.getEntry('admin').envDependent).toBe(false);
+  });
+
+  it('GIVEN env_dependent entries WHEN imported THEN the flags are stored', async () => {
+    const incoming = Namespace.create('users');
+    incoming.setEntries([Entry.create('db-host', 'localhost', undefined, true)]);
+    await repository.importNamespaces([incoming]);
+
+    expect((await repository.findByName('users'))?.getEntry('db-host').envDependent).toBe(true);
+  });
+
+  it('GIVEN a pre-existing row inserted without env_dependent THEN it reads back as false', async () => {
+    // Proves the column default upgrades historical rows rather than
+    // surfacing NULL: this INSERT omits env_dependent entirely.
+    const pool = getPool();
+    const [result] = await pool.query<ResultSetHeader>('INSERT INTO namespaces (name) VALUES (?)', [
+      'legacy',
+    ]);
+    await pool.query('INSERT INTO entries (namespace_id, entry_name, value) VALUES (?, ?, ?)', [
+      result.insertId,
+      'admin',
+      'secret',
+    ]);
+
+    const stored = await repository.findByName('legacy');
+    expect(stored?.getEntry('admin').envDependent).toBe(false);
+    expect(stored?.getEntry('admin').value).toBe('secret');
   });
 });
 

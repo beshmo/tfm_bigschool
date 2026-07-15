@@ -8,6 +8,7 @@ import {
   EntryNotFoundError,
   InvalidDescriptionError,
   InvalidEntryValueError,
+  InvalidEnvDependentError,
   InvalidYamlError,
   InvalidResourceNameError,
   NamespaceNotFoundError,
@@ -26,6 +27,7 @@ describe('domain errors', () => {
     expect(new InvalidResourceNameError('x').code).toBe(ERROR_CODES.VALIDATION);
     expect(new InvalidEntryValueError('k').code).toBe(ERROR_CODES.VALIDATION);
     expect(new InvalidDescriptionError('k').code).toBe(ERROR_CODES.VALIDATION);
+    expect(new InvalidEnvDependentError('k').code).toBe(ERROR_CODES.VALIDATION);
     expect(new EmptyNamespaceUpdateError('ns').code).toBe(ERROR_CODES.VALIDATION);
     expect(new DuplicateNamespaceError('ns').code).toBe(ERROR_CODES.DUPLICATE_NAMESPACE);
     expect(new DuplicateEntryError('ns', 'e').code).toBe(ERROR_CODES.DUPLICATE_ENTRY);
@@ -37,6 +39,7 @@ describe('domain errors', () => {
   it('carries contextual fields for mapping', () => {
     expect(new InvalidEntryValueError('k').entryName).toBe('k');
     expect(new InvalidDescriptionError('k').resourceName).toBe('k');
+    expect(new InvalidEnvDependentError('k').entryName).toBe('k');
     expect(new EmptyNamespaceUpdateError('ns').namespaceName).toBe('ns');
     expect(new DuplicateNamespaceError('ns').namespaceName).toBe('ns');
     const dup = new DuplicateEntryError('ns', 'e');

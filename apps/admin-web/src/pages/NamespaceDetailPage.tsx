@@ -18,6 +18,8 @@ export function NamespaceDetailPage() {
   const [entryName, setEntryName] = useState('');
   const [entryValue, setEntryValue] = useState('');
   const [entryDescription, setEntryDescription] = useState('');
+  const [entryEnvDependent, setEntryEnvDependent] = useState(false);
+  const [onlyEnvDependent, setOnlyEnvDependent] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -75,10 +77,17 @@ export function NamespaceDetailPage() {
     event.preventDefault();
     setError(null);
     try {
-      await api.createEntry(name, entryName.trim(), entryValue, entryDescription);
+      await api.createEntry(
+        name,
+        entryName.trim(),
+        entryValue,
+        entryDescription,
+        entryEnvDependent,
+      );
       setEntryName('');
       setEntryValue('');
       setEntryDescription('');
+      setEntryEnvDependent(false);
       await reload();
     } catch (err) {
       setError(messageOf(err));
@@ -91,8 +100,11 @@ export function NamespaceDetailPage() {
     const form = new FormData(event.currentTarget);
     const value = String(form.get('value') ?? '');
     const description = String(form.get('description') ?? '');
+    // An unchecked checkbox is absent from the form data, and the form always
+    // renders the entry's current state, so absence means the admin cleared it.
+    const envDependent = form.get('env_dependent') !== null;
     try {
-      await api.updateEntry(name, entry, { value, description });
+      await api.updateEntry(name, entry, { value, description, env_dependent: envDependent });
       await reload();
     } catch (err) {
       setError(messageOf(err));
@@ -123,6 +135,10 @@ export function NamespaceDetailPage() {
       </section>
     );
   }
+
+  const visibleEntries = onlyEnvDependent
+    ? namespace.entries.filter((entry) => entry.env_dependent)
+    : namespace.entries;
 
   return (
     <section>
@@ -181,14 +197,31 @@ export function NamespaceDetailPage() {
           value={entryDescription}
           onChange={(e) => setEntryDescription(e.target.value)}
         />
+        <input
+          id="entry-env-dependent"
+          type="checkbox"
+          checked={entryEnvDependent}
+          onChange={(e) => setEntryEnvDependent(e.target.checked)}
+        />
+        <label htmlFor="entry-env-dependent">Environment-dependent</label>
         <button type="submit">Add entry</button>
       </form>
 
+      <input
+        id="filter-env-dependent"
+        type="checkbox"
+        checked={onlyEnvDependent}
+        onChange={(e) => setOnlyEnvDependent(e.target.checked)}
+      />
+      <label htmlFor="filter-env-dependent">Show only environment-dependent entries</label>
+
       {namespace.entries.length === 0 ? (
         <p>No entries yet.</p>
+      ) : visibleEntries.length === 0 ? (
+        <p>No environment-dependent entries.</p>
       ) : (
         <ul>
-          {namespace.entries.map((entry) => (
+          {visibleEntries.map((entry) => (
             <li key={entry.name}>
               <form
                 aria-label={`Edit entry ${entry.name}`}
@@ -206,8 +239,15 @@ export function NamespaceDetailPage() {
                   defaultValue={entry.description ?? ''}
                   aria-label={`Description for ${entry.name}`}
                 />
+                <input
+                  name="env_dependent"
+                  type="checkbox"
+                  defaultChecked={entry.env_dependent}
+                  aria-label={`Environment-dependent for ${entry.name}`}
+                />
                 <button type="submit">Save</button>
               </form>
+              {entry.env_dependent && <p>Environment-dependent</p>}
               {entry.description && <p>{entry.description}</p>}
               <Timestamps createdAt={entry.created_at} modifiedAt={entry.modified_at} />
               <button

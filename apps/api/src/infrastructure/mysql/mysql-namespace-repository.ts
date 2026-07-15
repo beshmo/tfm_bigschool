@@ -15,6 +15,7 @@ interface EntryRow extends RowDataPacket {
   entry_name: string;
   value: string;
   description: string | null;
+  env_dependent: number | boolean;
   created_at: Date | string;
   modified_at: Date | string;
 }
@@ -23,6 +24,7 @@ interface EntryValueRow extends RowDataPacket {
   entry_name: string;
   value: string;
   description: string | null;
+  env_dependent: number | boolean;
 }
 
 interface TimestampRow extends RowDataPacket {
@@ -58,6 +60,14 @@ function fromColumn(description: string | null): string | undefined {
 }
 
 /**
+ * Maps the `env_dependent` column to a domain boolean. MySQL's BOOLEAN is a
+ * TINYINT(1), so the driver hands back 0/1 rather than a JavaScript boolean.
+ */
+function fromBoolColumn(value: number | boolean): boolean {
+  return Boolean(value);
+}
+
+/**
  * MySQL-backed implementation of the namespace repository port.
  *
  * All persistence types (`mysql2` rows, pools, connections) stay inside this
@@ -82,7 +92,7 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
     }
     const ids = namespaceRows.map((row) => row.id);
     const [entryRows] = await this.pool.query<EntryRow[]>(
-      'SELECT namespace_id, entry_name, value, description, created_at, updated_at AS modified_at FROM entries WHERE namespace_id IN (?) ORDER BY entry_name',
+      'SELECT namespace_id, entry_name, value, description, env_dependent, created_at, updated_at AS modified_at FROM entries WHERE namespace_id IN (?) ORDER BY entry_name',
       [ids],
     );
     const entriesByNamespaceId = new Map<number, EntryRow[]>();
@@ -106,7 +116,7 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
     }
     const namespaceRow = namespaceRows[0];
     const [entryRows] = await this.pool.query<EntryRow[]>(
-      'SELECT namespace_id, entry_name, value, description, created_at, updated_at AS modified_at FROM entries WHERE namespace_id = ? ORDER BY entry_name',
+      'SELECT namespace_id, entry_name, value, description, env_dependent, created_at, updated_at AS modified_at FROM entries WHERE namespace_id = ? ORDER BY entry_name',
       [namespaceRow.id],
     );
     return this.toNamespace(namespaceRow, entryRows);
@@ -201,7 +211,7 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
     const namespaceId = result.insertId;
 
     const [existingRows] = await connection.query<EntryValueRow[]>(
-      'SELECT entry_name, value, description FROM entries WHERE namespace_id = ?',
+      'SELECT entry_name, value, description, env_dependent FROM entries WHERE namespace_id = ?',
       [namespaceId],
     );
     const existing = new Map(existingRows.map((row) => [row.entry_name, row]));
@@ -225,30 +235,32 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
         // (createdAt === modifiedAt) fall back to the column default.
         if (entry.createdAt !== entry.modifiedAt) {
           await connection.query(
-            'INSERT INTO entries (namespace_id, entry_name, value, description, created_at) VALUES (?, ?, ?, ?, ?)',
+            'INSERT INTO entries (namespace_id, entry_name, value, description, env_dependent, created_at) VALUES (?, ?, ?, ?, ?, ?)',
             [
               namespaceId,
               entry.name,
               entry.value,
               toColumn(entry.description),
+              entry.envDependent,
               new Date(entry.createdAt),
             ],
           );
         } else {
           await connection.query(
-            'INSERT INTO entries (namespace_id, entry_name, value, description) VALUES (?, ?, ?, ?)',
-            [namespaceId, entry.name, entry.value, toColumn(entry.description)],
+            'INSERT INTO entries (namespace_id, entry_name, value, description, env_dependent) VALUES (?, ?, ?, ?, ?)',
+            [namespaceId, entry.name, entry.value, toColumn(entry.description), entry.envDependent],
           );
         }
       } else if (
         prior.value !== entry.value ||
-        fromColumn(prior.description) !== entry.description
+        fromColumn(prior.description) !== entry.description ||
+        fromBoolColumn(prior.env_dependent) !== entry.envDependent
       ) {
-        // A description-only change is still a change: updating the row
-        // refreshes `updated_at` so `modified_at` reflects it.
+        // A description- or env_dependent-only change is still a change:
+        // updating the row refreshes `updated_at` so `modified_at` reflects it.
         await connection.query(
-          'UPDATE entries SET value = ?, description = ? WHERE namespace_id = ? AND entry_name = ?',
-          [entry.value, toColumn(entry.description), namespaceId, entry.name],
+          'UPDATE entries SET value = ?, description = ?, env_dependent = ? WHERE namespace_id = ? AND entry_name = ?',
+          [entry.value, toColumn(entry.description), entry.envDependent, namespaceId, entry.name],
         );
       }
     }
@@ -270,9 +282,10 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
       entry.name,
       entry.value,
       toColumn(entry.description),
+      entry.envDependent,
     ]);
     await connection.query(
-      'INSERT INTO entries (namespace_id, entry_name, value, description) VALUES ?',
+      'INSERT INTO entries (namespace_id, entry_name, value, description, env_dependent) VALUES ?',
       [values],
     );
   }
@@ -331,6 +344,7 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
         toIso(row.created_at),
         toIso(row.modified_at),
         fromColumn(row.description),
+        fromBoolColumn(row.env_dependent),
       ),
     );
     return Namespace.rehydrate(

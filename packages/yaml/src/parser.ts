@@ -8,15 +8,17 @@ import {
 import { YamlError } from './errors.js';
 
 /**
- * Parsed entry. Descriptions are user-authored data and are preserved, unlike
- * timestamp metadata: `created_at` and `modified_at` keys are accepted on input
- * but ignored, because timestamps describe the target store lifecycle, not the
- * source document.
+ * Parsed entry. Descriptions and the environment-dependence marker are
+ * user-authored data and are preserved, unlike timestamp metadata: `created_at`
+ * and `modified_at` keys are accepted on input but ignored, because timestamps
+ * describe the target store lifecycle, not the source document.
  */
 export interface ParsedEntry {
   name: string;
   value: string;
   description?: string;
+  /** Defaults to `false` when the document omits `env_dependent`. */
+  envDependent: boolean;
 }
 
 /** Parsed namespace, without timestamp metadata (see {@link ParsedEntry}). */
@@ -72,6 +74,21 @@ function parseDescription(raw: unknown, message: string): string | undefined {
   return trimmed.length === 0 ? undefined : trimmed;
 }
 
+/**
+ * Validates the optional environment-dependence marker at the YAML boundary,
+ * mirroring the domain rule: booleans only, absent means `false`. A quoted
+ * `"true"` in a hand-edited file is rejected rather than read as truthy.
+ */
+function parseEnvDependent(raw: unknown, message: string): boolean {
+  if (raw === undefined || raw === null) {
+    return false;
+  }
+  if (typeof raw !== 'boolean') {
+    throw invalid(message);
+  }
+  return raw;
+}
+
 function parseEntries(raw: unknown, namespaceName: string): ParsedEntry[] {
   if (raw === undefined) {
     return [];
@@ -90,6 +107,7 @@ function parseEntries(raw: unknown, namespaceName: string): ParsedEntry[] {
         key !== 'name' &&
         key !== 'value' &&
         key !== 'description' &&
+        key !== 'env_dependent' &&
         !IGNORED_METADATA_KEYS.has(key)
       ) {
         throw invalid(`Unexpected entry key "${key}".`);
@@ -103,6 +121,10 @@ function parseEntries(raw: unknown, namespaceName: string): ParsedEntry[] {
       item.description,
       `Entry "${name}" description must be a string of at most ${DESCRIPTION_MAX_LENGTH} characters.`,
     );
+    const envDependent = parseEnvDependent(
+      item.env_dependent,
+      `Entry "${name}" env_dependent must be a boolean.`,
+    );
     if (seen.has(name)) {
       throw new YamlError(
         ERROR_CODES.DUPLICATE_ENTRY,
@@ -114,6 +136,7 @@ function parseEntries(raw: unknown, namespaceName: string): ParsedEntry[] {
       name,
       value: item.value,
       ...(description === undefined ? {} : { description }),
+      envDependent,
     });
   }
   return entries;

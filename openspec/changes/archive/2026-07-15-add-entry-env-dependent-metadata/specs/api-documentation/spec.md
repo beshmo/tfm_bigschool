@@ -1,30 +1,4 @@
-## Purpose
-
-Generated API documentation for OKVNS. Provides a machine-readable OpenAPI document and interactive Swagger UI for implemented API endpoints, schemas, request formats, and safe error responses.
-
-## Requirements
-
-### Requirement: Generated OpenAPI document
-The API SHALL expose a machine-readable OpenAPI document generated from the implemented NestJS controllers and API-facing schemas.
-
-#### Scenario: Raw OpenAPI document is available
-- **WHEN** a client requests the documented raw OpenAPI endpoint
-- **THEN** the API returns a successful OpenAPI document response
-
-#### Scenario: OpenAPI document includes implemented routes
-- **WHEN** the raw OpenAPI document is generated
-- **THEN** it includes the health, readiness, namespace, entry, YAML import, and YAML export routes implemented by the API
-
-#### Scenario: OpenAPI document preserves existing API behavior
-- **WHEN** OpenAPI documentation is added
-- **THEN** existing API routes, request bodies, response bodies, status codes, and storage behavior remain unchanged
-
-### Requirement: Swagger UI
-The API SHALL expose an interactive Swagger UI for the generated OpenAPI document.
-
-#### Scenario: Swagger UI is available
-- **WHEN** a developer opens the documented Swagger UI endpoint
-- **THEN** the API serves an interactive documentation page backed by the generated OpenAPI document
+## MODIFIED Requirements
 
 ### Requirement: Documented request and response schemas
 The generated OpenAPI document SHALL describe API request bodies, response bodies, path parameters, validation constraints, multipart upload support, description fields, entry `env_dependent` fields, timestamp fields, and safe error shapes for documented endpoints.
@@ -44,10 +18,3 @@ The generated OpenAPI document SHALL describe API request bodies, response bodie
 #### Scenario: Probe schemas are documented
 - **WHEN** the OpenAPI document describes health and readiness endpoints
 - **THEN** it documents their successful response bodies and the readiness not-ready error response
-
-### Requirement: Developer documentation links generated docs
-Project documentation SHALL tell developers where to find the generated Swagger UI and raw OpenAPI document when running the API.
-
-#### Scenario: Developer finds generated API docs
-- **WHEN** a developer reads the project API documentation
-- **THEN** it identifies the Swagger UI endpoint and raw OpenAPI document endpoint

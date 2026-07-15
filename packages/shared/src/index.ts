@@ -12,6 +12,12 @@ export interface EntryDto {
   value: string;
   /** Optional human-facing documentation. Absent when no description is stored. */
   description?: string;
+  /**
+   * Whether the entry's value is specific to a deployment environment and needs
+   * review after being imported elsewhere. Always present; an entry stored
+   * without the flag reads back as `false`.
+   */
+  env_dependent: boolean;
   /** ISO 8601 timestamp of when the entry was first created. */
   created_at: string;
   /** ISO 8601 timestamp of when the entry was last modified. */
@@ -56,6 +62,11 @@ export interface EntryInputDto {
   value: string;
   /** Optional human-facing documentation. Blank values clear the description. */
   description?: string;
+  /**
+   * Whether the value is environment-specific. Omitting the field on create
+   * stores `false`; omitting it on update keeps the stored value.
+   */
+  env_dependent?: boolean;
 }
 
 /** Request body used to import YAML. */

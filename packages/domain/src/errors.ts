@@ -39,6 +39,14 @@ export class InvalidDescriptionError extends DomainError {
   }
 }
 
+export class InvalidEnvDependentError extends DomainError {
+  readonly code = ERROR_CODES.VALIDATION;
+
+  constructor(readonly entryName: string) {
+    super(`Environment dependence for "${entryName}" must be a boolean.`);
+  }
+}
+
 export class EmptyNamespaceUpdateError extends DomainError {
   readonly code = ERROR_CODES.VALIDATION;
 

@@ -18,8 +18,8 @@ describe('parseNamespacesYaml', () => {
       {
         name: 'users',
         entries: [
-          { name: 'admin', value: 'secret' },
-          { name: 'guest', value: '' },
+          { name: 'admin', value: 'secret', envDependent: false },
+          { name: 'guest', value: '', envDependent: false },
         ],
       },
       { name: 'settings', entries: [] },
@@ -33,7 +33,7 @@ describe('parseNamespacesYaml', () => {
     - name: admin
       value: secret`;
     expect(parseNamespacesYaml(yaml)).toEqual([
-      { name: 'users', entries: [{ name: 'admin', value: 'secret' }] },
+      { name: 'users', entries: [{ name: 'admin', value: 'secret', envDependent: false }] },
     ]);
   });
 
@@ -50,7 +50,7 @@ describe('parseNamespacesYaml', () => {
     - name: "  admin  "
       value: v`;
     expect(parseNamespacesYaml(yaml)).toEqual([
-      { name: 'users', entries: [{ name: 'admin', value: 'v' }] },
+      { name: 'users', entries: [{ name: 'admin', value: 'v', envDependent: false }] },
     ]);
   });
 
@@ -198,7 +198,7 @@ describe('parseNamespacesYaml', () => {
         created_at: "2020-02-01T00:00:00.000Z"
         modified_at: "2021-02-01T00:00:00.000Z"`;
     expect(parseNamespacesYaml(yaml)).toEqual([
-      { name: 'users', entries: [{ name: 'admin', value: 'secret' }] },
+      { name: 'users', entries: [{ name: 'admin', value: 'secret', envDependent: false }] },
     ]);
   });
 
@@ -214,7 +214,9 @@ describe('parseNamespacesYaml', () => {
       {
         name: 'users',
         description: 'the users',
-        entries: [{ name: 'admin', value: 'secret', description: 'the admin key' }],
+        entries: [
+          { name: 'admin', value: 'secret', description: 'the admin key', envDependent: false },
+        ],
       },
     ]);
   });
@@ -228,7 +230,7 @@ describe('parseNamespacesYaml', () => {
         value: secret
         description: ""`;
     expect(parseNamespacesYaml(yaml)).toEqual([
-      { name: 'users', entries: [{ name: 'admin', value: 'secret' }] },
+      { name: 'users', entries: [{ name: 'admin', value: 'secret', envDependent: false }] },
     ]);
   });
 
@@ -291,6 +293,75 @@ describe('parseNamespacesYaml', () => {
     entries: []`;
     expect(parseNamespacesYaml(yaml)[0].description).toHaveLength(1000);
   });
+
+  it('GIVEN an entry env_dependent WHEN parsed THEN the boolean is preserved', () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: db-host
+        value: localhost
+        env_dependent: true
+      - name: retries
+        value: "3"
+        env_dependent: false`;
+    expect(parseNamespacesYaml(yaml)[0].entries).toEqual([
+      { name: 'db-host', value: 'localhost', envDependent: true },
+      { name: 'retries', value: '3', envDependent: false },
+    ]);
+  });
+
+  it('GIVEN an entry without env_dependent WHEN parsed THEN it defaults to false', () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret`;
+    expect(parseNamespacesYaml(yaml)[0].entries[0].envDependent).toBe(false);
+  });
+
+  it('GIVEN a null entry env_dependent WHEN parsed THEN it defaults to false', () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret
+        env_dependent:`;
+    expect(parseNamespacesYaml(yaml)[0].entries[0].envDependent).toBe(false);
+  });
+
+  it('GIVEN a quoted string entry env_dependent WHEN parsed THEN it throws INVALID_YAML', () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret
+        env_dependent: "true"`;
+    expect(() => parseNamespacesYaml(yaml)).toThrowError(
+      expect.objectContaining({ code: ERROR_CODES.INVALID_YAML }),
+    );
+  });
+
+  it('GIVEN a non-boolean entry env_dependent WHEN parsed THEN it throws INVALID_YAML', () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret
+        env_dependent: 1`;
+    expect(() => parseNamespacesYaml(yaml)).toThrowError(
+      expect.objectContaining({ code: ERROR_CODES.INVALID_YAML }),
+    );
+  });
+
+  it('GIVEN env_dependent on a namespace WHEN parsed THEN it throws INVALID_YAML', () => {
+    const yaml = `namespaces:
+  - name: users
+    env_dependent: true
+    entries: []`;
+    expect(() => parseNamespacesYaml(yaml)).toThrowError(
+      expect.objectContaining({ code: ERROR_CODES.INVALID_YAML }),
+    );
+  });
 });
 
 describe('serializeNamespacesYaml', () => {
@@ -305,8 +376,18 @@ describe('serializeNamespacesYaml', () => {
         name: 'zeta',
         ...ts('2020-01-01T00:00:00.000Z', '2020-02-01T00:00:00.000Z'),
         entries: [
-          { name: 'b', value: '2', ...ts('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z') },
-          { name: 'a', value: '1', ...ts('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z') },
+          {
+            name: 'b',
+            value: '2',
+            env_dependent: false,
+            ...ts('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z'),
+          },
+          {
+            name: 'a',
+            value: '1',
+            env_dependent: false,
+            ...ts('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z'),
+          },
         ],
       },
       { name: 'alpha', ...ts('2019-01-01T00:00:00.000Z', '2019-01-01T00:00:00.000Z'), entries: [] },
@@ -319,8 +400,8 @@ describe('serializeNamespacesYaml', () => {
       {
         name: 'zeta',
         entries: [
-          { name: 'a', value: '1' },
-          { name: 'b', value: '2' },
+          { name: 'a', value: '1', envDependent: false },
+          { name: 'b', value: '2', envDependent: false },
         ],
       },
     ]);
@@ -335,6 +416,7 @@ describe('serializeNamespacesYaml', () => {
           {
             name: 'admin',
             value: 'secret',
+            env_dependent: false,
             ...ts('2020-03-01T00:00:00.000Z', '2020-04-01T00:00:00.000Z'),
           },
         ],
@@ -357,6 +439,7 @@ describe('serializeNamespacesYaml', () => {
             name: 'admin',
             value: 'secret',
             description: 'the admin key',
+            env_dependent: false,
             ...ts('2020-03-01T00:00:00.000Z', '2020-04-01T00:00:00.000Z'),
           },
         ],
@@ -368,7 +451,9 @@ describe('serializeNamespacesYaml', () => {
       {
         name: 'users',
         description: 'the users',
-        entries: [{ name: 'admin', value: 'secret', description: 'the admin key' }],
+        entries: [
+          { name: 'admin', value: 'secret', description: 'the admin key', envDependent: false },
+        ],
       },
     ]);
   });
@@ -382,12 +467,42 @@ describe('serializeNamespacesYaml', () => {
           {
             name: 'admin',
             value: 'secret',
+            env_dependent: false,
             ...ts('2020-03-01T00:00:00.000Z', '2020-04-01T00:00:00.000Z'),
           },
         ],
       },
     ]);
     expect(yaml).not.toContain('description');
+  });
+
+  it('GIVEN entries WHEN serialized THEN env_dependent is emitted for every entry including false', () => {
+    const yaml = serializeNamespacesYaml([
+      {
+        name: 'users',
+        ...ts('2020-01-01T00:00:00.000Z', '2020-02-01T00:00:00.000Z'),
+        entries: [
+          {
+            name: 'db-host',
+            value: 'localhost',
+            env_dependent: true,
+            ...ts('2020-03-01T00:00:00.000Z', '2020-04-01T00:00:00.000Z'),
+          },
+          {
+            name: 'retries',
+            value: '3',
+            env_dependent: false,
+            ...ts('2020-03-01T00:00:00.000Z', '2020-04-01T00:00:00.000Z'),
+          },
+        ],
+      },
+    ]);
+    expect(yaml).toContain('env_dependent: true');
+    expect(yaml).toContain('env_dependent: false');
+    expect(parseNamespacesYaml(yaml)[0].entries).toEqual([
+      { name: 'db-host', value: 'localhost', envDependent: true },
+      { name: 'retries', value: '3', envDependent: false },
+    ]);
   });
 
   it('GIVEN an empty namespace list WHEN serialized THEN it round-trips to an empty list', () => {

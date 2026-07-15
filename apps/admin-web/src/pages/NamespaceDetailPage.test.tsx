@@ -169,4 +169,108 @@ describe('NamespaceDetailPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete entry admin' }));
     await waitFor(() => expect(screen.queryByLabelText('Value for admin')).toBeNull());
   });
+
+  it('creates a new entry marked as environment-dependent', async () => {
+    renderApp(seededApi(), '/namespaces/users');
+    await screen.findByRole('heading', { name: 'Namespace: users' });
+
+    await userEvent.type(screen.getByLabelText('Entry name'), 'db-host');
+    await userEvent.type(screen.getByLabelText('Entry value'), 'localhost');
+    await userEvent.click(screen.getByLabelText('Environment-dependent'));
+    await userEvent.click(screen.getByRole('button', { name: 'Add entry' }));
+
+    expect(await screen.findByLabelText('Environment-dependent for db-host')).toBeChecked();
+    // The create form resets so the marker does not leak into the next entry.
+    expect(screen.getByLabelText('Environment-dependent')).not.toBeChecked();
+  });
+
+  it('creates an entry without the marker as not environment-dependent', async () => {
+    renderApp(seededApi(), '/namespaces/users');
+    await screen.findByRole('heading', { name: 'Namespace: users' });
+
+    await userEvent.type(screen.getByLabelText('Entry name'), 'token');
+    await userEvent.type(screen.getByLabelText('Entry value'), 'abc');
+    await userEvent.click(screen.getByRole('button', { name: 'Add entry' }));
+
+    expect(await screen.findByLabelText('Environment-dependent for token')).not.toBeChecked();
+  });
+
+  it('displays the stored env_dependent state for entries', async () => {
+    const api = new FakeOkvnsApi();
+    api.seed([
+      {
+        name: 'users',
+        entries: [
+          { name: 'db-host', value: 'localhost', env_dependent: true },
+          { name: 'retries', value: '3' },
+        ],
+      },
+    ]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByRole('heading', { name: 'Namespace: users' });
+
+    expect(screen.getByLabelText('Environment-dependent for db-host')).toBeChecked();
+    expect(screen.getByLabelText('Environment-dependent for retries')).not.toBeChecked();
+    expect(screen.getByText('Environment-dependent', { selector: 'p' })).toBeInTheDocument();
+  });
+
+  it('marks an existing entry as environment-dependent while preserving its value', async () => {
+    renderApp(seededApi(), '/namespaces/users');
+    await screen.findByLabelText('Value for admin');
+
+    await userEvent.click(screen.getByLabelText('Environment-dependent for admin'));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Environment-dependent', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Value for admin')).toHaveValue('secret');
+  });
+
+  it('clears the environment-dependent marker on an existing entry', async () => {
+    const api = new FakeOkvnsApi();
+    api.seed([
+      { name: 'users', entries: [{ name: 'db-host', value: 'localhost', env_dependent: true }] },
+    ]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByText('Environment-dependent', { selector: 'p' });
+
+    await userEvent.click(screen.getByLabelText('Environment-dependent for db-host'));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(screen.queryByText('Environment-dependent', { selector: 'p' })).toBeNull(),
+    );
+  });
+
+  it('filters the list down to environment-dependent entries', async () => {
+    const api = new FakeOkvnsApi();
+    api.seed([
+      {
+        name: 'users',
+        entries: [
+          { name: 'db-host', value: 'localhost', env_dependent: true },
+          { name: 'retries', value: '3' },
+        ],
+      },
+    ]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByLabelText('Value for retries');
+
+    await userEvent.click(screen.getByLabelText('Show only environment-dependent entries'));
+
+    expect(screen.getByLabelText('Value for db-host')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Value for retries')).toBeNull();
+
+    await userEvent.click(screen.getByLabelText('Show only environment-dependent entries'));
+    expect(screen.getByLabelText('Value for retries')).toBeInTheDocument();
+  });
+
+  it('reports when a namespace has no environment-dependent entries to review', async () => {
+    renderApp(seededApi(), '/namespaces/users');
+    await screen.findByLabelText('Value for admin');
+
+    await userEvent.click(screen.getByLabelText('Show only environment-dependent entries'));
+
+    expect(screen.getByText('No environment-dependent entries.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Value for admin')).toBeNull();
+  });
 });

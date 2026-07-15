@@ -111,6 +111,68 @@ describe('HttpOkvnsApi', () => {
     expect(await api.getNamespace('users')).toEqual(dto);
   });
 
+  it('POST createEntry sends env_dependent when supplied', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ name: 'db-host', value: 'v' }, 201));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.createEntry('users', 'db-host', 'localhost', undefined, true);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces/users/entries',
+      expect.objectContaining({
+        body: JSON.stringify({ name: 'db-host', value: 'localhost', env_dependent: true }),
+      }),
+    );
+  });
+
+  it('omits env_dependent from create bodies when it is not supplied', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ name: 'admin', value: 'v' }, 201));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.createEntry('users', 'admin', 'v');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces/users/entries',
+      expect.objectContaining({ body: JSON.stringify({ name: 'admin', value: 'v' }) }),
+    );
+  });
+
+  it('PUT updateEntry sends env_dependent when supplied', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ name: 'admin', value: 'v' }));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.updateEntry('users', 'admin', { env_dependent: false });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces/users/entries/admin',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ env_dependent: false }),
+      }),
+    );
+  });
+
+  it('preserves entry env_dependent fields on responses', async () => {
+    const dto = {
+      name: 'users',
+      created_at: '2024-05-01T00:00:00.000Z',
+      modified_at: '2024-06-01T00:00:00.000Z',
+      entries: [
+        {
+          name: 'db-host',
+          value: 'localhost',
+          env_dependent: true,
+          created_at: '2024-05-02T00:00:00.000Z',
+          modified_at: '2024-06-02T00:00:00.000Z',
+        },
+        {
+          name: 'retries',
+          value: '3',
+          env_dependent: false,
+          created_at: '2024-05-02T00:00:00.000Z',
+          modified_at: '2024-06-02T00:00:00.000Z',
+        },
+      ],
+    };
+    const fetchImpl = vi.fn(async () => jsonResponse(dto));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    expect(await api.getNamespace('users')).toEqual(dto);
+  });
+
   it('maps a safe error body into an ApiError with code and status', async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({ error: { code: 'DUPLICATE_NAMESPACE', message: 'exists' } }, 409),
