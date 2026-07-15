@@ -39,6 +39,39 @@ export interface NamespaceDto {
   modified_at: string;
 }
 
+/**
+ * A namespace as returned by the paginated list endpoint.
+ *
+ * Deliberately omits `entries`: a page of namespaces would otherwise carry
+ * every entry of every namespace on it, which defeats the point of paging and
+ * makes list ordering and filtering far more expensive. Fetch a namespace's
+ * entries from the paginated entry list endpoint, or the whole aggregate from
+ * the namespace detail endpoint.
+ */
+export interface NamespaceListItemDto {
+  name: string;
+  /** Optional human-facing documentation. Absent when no description is stored. */
+  description?: string;
+  /** ISO 8601 timestamp of when the namespace was first created. */
+  created_at: string;
+  /** ISO 8601 timestamp of the last change to the namespace or its entries. */
+  modified_at: string;
+}
+
+/** One page of a list result, with metadata describing the full result set. */
+export interface PaginatedResultDto<T> {
+  /** The items on the requested page. Shorter than `page_size` on the last page. */
+  items: T[];
+  /** 1-based index of the returned page. */
+  page: number;
+  /** The page size the result was built with; one of {@link PAGE_SIZES}. */
+  page_size: number;
+  /** Total items matching the query across every page, ignoring pagination. */
+  total_items: number;
+  /** Total pages available for `total_items` at `page_size`; 0 when empty. */
+  total_pages: number;
+}
+
 /** Safe API error shape. Never contains stack traces or implementation details. */
 export interface ApiErrorDto {
   error: {
@@ -120,6 +153,80 @@ export const ERROR_CODES = {
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+
+/**
+ * Page sizes a list query may request. Allowlisted rather than range-checked so
+ * the API, the admin UI, and any cache keyed on the query all agree on the same
+ * small set of pages.
+ */
+export const PAGE_SIZES = [10, 50, 100] as const;
+
+export type PageSize = (typeof PAGE_SIZES)[number];
+
+/** Page size used when a list query does not request one. */
+export const DEFAULT_PAGE_SIZE: PageSize = 10;
+
+/** Sort fields accepted by the namespace list query. */
+export const NAMESPACE_SORT_FIELDS = ['name', 'created_at', 'modified_at'] as const;
+
+export type NamespaceSortField = (typeof NAMESPACE_SORT_FIELDS)[number];
+
+/** Sort fields accepted by the entry list query. */
+export const ENTRY_SORT_FIELDS = ['name', 'created_at', 'modified_at', 'env_dependent'] as const;
+
+export type EntrySortField = (typeof ENTRY_SORT_FIELDS)[number];
+
+/** Sort directions accepted by any list query. */
+export const SORT_DIRECTIONS = ['asc', 'desc'] as const;
+
+export type SortDirection = (typeof SORT_DIRECTIONS)[number];
+
+/**
+ * Sort fields and directions are allowlisted (never passed through from the
+ * request) so repositories can map them to fixed SQL fragments without any risk
+ * of injection, and so in-memory and MySQL adapters cannot drift apart.
+ */
+export const DEFAULT_SORT_FIELD = 'name';
+
+/** Sort direction used when a list query does not request one. */
+export const DEFAULT_SORT_DIRECTION: SortDirection = 'asc';
+
+/** A normalized, validated namespace list query. */
+export interface NamespaceListQuery {
+  /** 1-based page index. */
+  page: number;
+  page_size: PageSize;
+  sort: NamespaceSortField;
+  direction: SortDirection;
+  /** Case-insensitive "contains" filter on the namespace name. */
+  name?: string;
+}
+
+/** A normalized, validated entry list query. */
+export interface EntryListQuery {
+  /** 1-based page index. */
+  page: number;
+  page_size: PageSize;
+  sort: EntrySortField;
+  direction: SortDirection;
+  /** Case-insensitive "contains" filter on the entry name. */
+  name?: string;
+  /** Restricts to entries with this environment-dependence; omit for all. */
+  env_dependent?: boolean;
+}
+
+/** Whether `value` is a page size the API accepts. */
+export function isPageSize(value: number): value is PageSize {
+  return (PAGE_SIZES as readonly number[]).includes(value);
+}
+
+/**
+ * Total pages for `totalItems` at `pageSize`. An empty result set has 0 pages,
+ * so a caller can distinguish "nothing matched" from "one empty page".
+ */
+export function totalPages(totalItems: number, pageSize: PageSize): number {
+  return Math.ceil(totalItems / pageSize);
+}
 
 /** Deterministic, locale-independent ordering for namespace and entry names. */
 export function compareNames(a: string, b: string): number {

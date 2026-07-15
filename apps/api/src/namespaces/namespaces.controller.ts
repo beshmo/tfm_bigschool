@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -14,15 +14,16 @@ import {
   ListNamespacesUseCase,
   UpdateNamespaceUseCase,
 } from '@okvns/application';
-import type { NamespaceDto } from '@okvns/shared';
+import type { NamespaceDto, NamespaceListItemDto, PaginatedResultDto } from '@okvns/shared';
 import { NameParamPipe } from '../common/name-param.pipe';
 import {
   ApiBadRequestError,
   ApiConflictError,
   ApiNotFoundError,
 } from '../common/api-error.decorators';
+import { NamespaceListQueryDto } from '../common/list-query.dto';
 import { NamespaceInputDto, UpdateNamespaceDto } from './namespace.dto';
-import { NamespaceResponse } from './namespace.schema';
+import { NamespaceResponse, PaginatedNamespaceListResponse } from './namespace.schema';
 
 @ApiTags('namespaces')
 @Controller('namespaces')
@@ -36,10 +37,16 @@ export class NamespacesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all namespaces, ordered by name.' })
-  @ApiOkResponse({ type: [NamespaceResponse] })
-  list(): Promise<NamespaceDto[]> {
-    return this.listNamespaces.execute();
+  @ApiOperation({
+    summary: 'List namespaces as a page, ordered and filtered by the given query.',
+    description:
+      'Returns a paginated result rather than an array. Items carry no entries — ' +
+      'read those from GET /namespaces/{namespace}/entries.',
+  })
+  @ApiOkResponse({ type: PaginatedNamespaceListResponse })
+  @ApiBadRequestError()
+  list(@Query() query: NamespaceListQueryDto): Promise<PaginatedResultDto<NamespaceListItemDto>> {
+    return this.listNamespaces.execute(query);
   }
 
   @Post()

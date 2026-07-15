@@ -1,4 +1,27 @@
-import type { Namespace } from '@okvns/domain';
+import type { Entry, Namespace } from '@okvns/domain';
+import type { EntryListQuery, NamespaceListQuery } from '@okvns/shared';
+
+/**
+ * A namespace without its entries, as returned by paginated listing. Loading
+ * every entry of every namespace on a page would defeat the paging, so list
+ * queries read only the namespace row.
+ */
+export interface NamespaceSummary {
+  name: string;
+  description?: string;
+  createdAt: string;
+  modifiedAt: string;
+}
+
+/**
+ * One page of matching rows plus the total number of matches across all pages.
+ * `totalItems` counts everything the query's filters match, ignoring its page
+ * and page size, so callers can compute page counts.
+ */
+export interface PageResult<T> {
+  items: T[];
+  totalItems: number;
+}
 
 /**
  * Persistence port for namespaces. Implemented by infrastructure adapters
@@ -9,8 +32,28 @@ import type { Namespace } from '@okvns/domain';
  * replaces the namespace's stored entries with its current entries.
  */
 export interface NamespaceRepository {
-  /** Returns all stored namespaces in no guaranteed order. */
+  /**
+   * Returns all stored namespaces, with entries, in no guaranteed order. Used
+   * by YAML export, which needs the whole dataset; list *browsing* should use
+   * `listPage` so the read stays bounded.
+   */
   list(): Promise<Namespace[]>;
+
+  /**
+   * Returns one page of namespace summaries matching `query`, plus the total
+   * number of matches. Implementations MUST apply the query's filter, ordering,
+   * and paging at the storage layer, and MUST break ties on the primary sort
+   * field by namespace name so pages stay stable across requests.
+   */
+  listPage(query: NamespaceListQuery): Promise<PageResult<NamespaceSummary>>;
+
+  /**
+   * Returns one page of entries in the named namespace matching `query`, plus
+   * the total number of matches — or null if the namespace does not exist, which
+   * callers surface as `NamespaceNotFoundError`. Ordering ties break on entry
+   * name, as in `listPage`.
+   */
+  listEntriesPage(namespaceName: string, query: EntryListQuery): Promise<PageResult<Entry> | null>;
 
   /** Returns the namespace with the given name, or null if absent. */
   findByName(name: string): Promise<Namespace | null>;

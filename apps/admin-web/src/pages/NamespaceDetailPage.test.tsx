@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FakeOkvnsApi } from '../test/fake-api';
@@ -272,5 +272,204 @@ describe('NamespaceDetailPage', () => {
 
     expect(screen.getByText('No environment-dependent entries.')).toBeInTheDocument();
     expect(screen.queryByLabelText('Value for admin')).toBeNull();
+  });
+});
+
+describe('NamespaceDetailPage entry list controls', () => {
+  /** Seeds one namespace holding `count` entries named e-001, e-002, … */
+  function apiWithEntries(count: number): FakeOkvnsApi {
+    const api = new FakeOkvnsApi();
+    api.seed([
+      {
+        name: 'users',
+        entries: Array.from({ length: count }, (_, index) => ({
+          name: `e-${String(index + 1).padStart(3, '0')}`,
+          value: 'v',
+        })),
+      },
+    ]);
+    return api;
+  }
+
+  it('requests entries from the entry list endpoint rather than the namespace detail', async () => {
+    const api = apiWithEntries(1);
+    const listEntries = vi.spyOn(api, 'listEntries');
+    renderApp(api, '/namespaces/users');
+    await screen.findByLabelText('Value for e-001');
+
+    expect(listEntries).toHaveBeenCalledWith('users', expect.objectContaining({ page: 1 }));
+  });
+
+  it('requests the selected page size from the API', async () => {
+    const api = apiWithEntries(12);
+    const listEntries = vi.spyOn(api, 'listEntries');
+    renderApp(api, '/namespaces/users');
+    await screen.findByLabelText('Value for e-001');
+
+    expect(screen.queryByLabelText('Value for e-011')).toBeNull();
+
+    await userEvent.selectOptions(screen.getByLabelText('Per page'), '50');
+
+    expect(await screen.findByLabelText('Value for e-011')).toBeInTheDocument();
+    expect(listEntries).toHaveBeenLastCalledWith(
+      'users',
+      expect.objectContaining({ page_size: 50 }),
+    );
+  });
+
+  it('shows entry pagination metadata from the API', async () => {
+    renderApp(apiWithEntries(12), '/namespaces/users');
+    await screen.findByLabelText('Value for e-001');
+
+    expect(screen.getByText(/Page 1 of 2 \(12 total\)/)).toBeInTheDocument();
+  });
+
+  it('navigates between entry pages', async () => {
+    const api = apiWithEntries(12);
+    const listEntries = vi.spyOn(api, 'listEntries');
+    renderApp(api, '/namespaces/users');
+    await screen.findByLabelText('Value for e-001');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next page of entries' }));
+
+    expect(await screen.findByLabelText('Value for e-011')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Value for e-001')).toBeNull();
+    expect(listEntries).toHaveBeenLastCalledWith('users', expect.objectContaining({ page: 2 }));
+  });
+
+  it('filters entries by name through the API', async () => {
+    const api = new FakeOkvnsApi();
+    const listEntries = vi.spyOn(api, 'listEntries');
+    api.seed([
+      {
+        name: 'users',
+        entries: [
+          { name: 'db-host', value: 'localhost' },
+          { name: 'retries', value: '3' },
+        ],
+      },
+    ]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByLabelText('Value for db-host');
+
+    await userEvent.type(screen.getByLabelText('Filter by name'), 'db');
+
+    await waitFor(() => expect(screen.queryByLabelText('Value for retries')).toBeNull());
+    expect(screen.getByLabelText('Value for db-host')).toBeInTheDocument();
+    expect(listEntries).toHaveBeenLastCalledWith('users', expect.objectContaining({ name: 'db' }));
+  });
+
+  it('reports when an entry filter matches nothing', async () => {
+    renderApp(apiWithEntries(1), '/namespaces/users');
+    await screen.findByLabelText('Value for e-001');
+
+    await userEvent.type(screen.getByLabelText('Filter by name'), 'nope');
+
+    expect(await screen.findByText('No entries match the filter.')).toBeInTheDocument();
+  });
+
+  it('requests an env_dependent filter from the API rather than filtering locally', async () => {
+    const api = new FakeOkvnsApi();
+    const listEntries = vi.spyOn(api, 'listEntries');
+    api.seed([
+      {
+        name: 'users',
+        entries: [
+          { name: 'db-host', value: 'localhost', env_dependent: true },
+          { name: 'retries', value: '3' },
+        ],
+      },
+    ]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByLabelText('Value for retries');
+
+    await userEvent.click(screen.getByLabelText('Show only environment-dependent entries'));
+
+    await waitFor(() =>
+      expect(listEntries).toHaveBeenLastCalledWith(
+        'users',
+        expect.objectContaining({ env_dependent: true }),
+      ),
+    );
+
+    // Clearing the box drops the filter entirely rather than asking for false.
+    await userEvent.click(screen.getByLabelText('Show only environment-dependent entries'));
+    await waitFor(() =>
+      expect(listEntries).toHaveBeenLastCalledWith(
+        'users',
+        expect.objectContaining({ env_dependent: undefined }),
+      ),
+    );
+  });
+
+  it('requests the selected entry ordering from the API', async () => {
+    const api = new FakeOkvnsApi();
+    const listEntries = vi.spyOn(api, 'listEntries');
+    api.seed([
+      {
+        name: 'users',
+        entries: [
+          { name: 'a-dependent', value: 'v', env_dependent: true },
+          { name: 'z-independent', value: 'v' },
+        ],
+      },
+    ]);
+    renderApp(api, '/namespaces/users');
+    await screen.findByLabelText('Value for a-dependent');
+
+    await userEvent.selectOptions(screen.getByLabelText('Order by'), 'env_dependent');
+
+    await waitFor(() =>
+      expect(listEntries).toHaveBeenLastCalledWith(
+        'users',
+        expect.objectContaining({ sort: 'env_dependent' }),
+      ),
+    );
+    // Ascending puts the non-environment-dependent entry first.
+    const values = screen.getAllByRole('textbox', { name: /^Value for/ });
+    expect(values.map((el) => el.getAttribute('aria-label'))).toEqual([
+      'Value for z-independent',
+      'Value for a-dependent',
+    ]);
+  });
+
+  it('steps back a page when deleting the last entry on the current page', async () => {
+    renderApp(apiWithEntries(11), '/namespaces/users');
+    await screen.findByLabelText('Value for e-001');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next page of entries' }));
+    // Page 2 holds exactly one entry; deleting it empties the page.
+    await screen.findByLabelText('Value for e-011');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete entry e-011' }));
+
+    expect(await screen.findByLabelText('Value for e-001')).toBeInTheDocument();
+    expect(screen.getByText(/Page 1 of 1 \(10 total\)/)).toBeInTheDocument();
+  });
+
+  it('reloads the active entry query after creating an entry', async () => {
+    const api = apiWithEntries(1);
+    const listEntries = vi.spyOn(api, 'listEntries');
+    renderApp(api, '/namespaces/users');
+    await screen.findByLabelText('Value for e-001');
+
+    await userEvent.selectOptions(screen.getByLabelText('Direction'), 'desc');
+    await waitFor(() =>
+      expect(listEntries).toHaveBeenLastCalledWith(
+        'users',
+        expect.objectContaining({ direction: 'desc' }),
+      ),
+    );
+
+    await userEvent.type(screen.getByLabelText('Entry name'), 'fresh');
+    await userEvent.type(screen.getByLabelText('Entry value'), 'v');
+    await userEvent.click(screen.getByRole('button', { name: 'Add entry' }));
+
+    expect(await screen.findByLabelText('Value for fresh')).toBeInTheDocument();
+    // The reload keeps the admin's chosen ordering.
+    expect(listEntries).toHaveBeenLastCalledWith(
+      'users',
+      expect.objectContaining({ direction: 'desc' }),
+    );
   });
 });
