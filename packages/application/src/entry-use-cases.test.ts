@@ -4,6 +4,7 @@ import {
   Entry,
   EntryNotFoundError,
   InvalidDescriptionError,
+  InvalidEnvDependentError,
   InvalidResourceNameError,
   Namespace,
   NamespaceNotFoundError,
@@ -75,6 +76,34 @@ describe('CreateEntryUseCase', () => {
     await expect(
       new CreateEntryUseCase(repository).execute('users', 'admin', 'v', 'x'.repeat(1001)),
     ).rejects.toBeInstanceOf(InvalidDescriptionError);
+    const ns = await repository.findByName('users');
+    expect(ns?.hasEntry('admin')).toBe(false);
+  });
+
+  it('GIVEN no env dependence WHEN created THEN it is stored and returned as false', async () => {
+    const dto = await new CreateEntryUseCase(repository).execute('users', 'admin', 'secret');
+    expect(dto.env_dependent).toBe(false);
+    const ns = await repository.findByName('users');
+    expect(ns?.getEntry('admin').envDependent).toBe(false);
+  });
+
+  it('GIVEN env dependence WHEN created THEN it is stored and returned as true', async () => {
+    const dto = await new CreateEntryUseCase(repository).execute(
+      'users',
+      'db-host',
+      'localhost',
+      undefined,
+      true,
+    );
+    expect(dto.env_dependent).toBe(true);
+    const ns = await repository.findByName('users');
+    expect(ns?.getEntry('db-host').envDependent).toBe(true);
+  });
+
+  it('GIVEN a non-boolean env dependence WHEN created THEN it throws a validation error', async () => {
+    await expect(
+      new CreateEntryUseCase(repository).execute('users', 'admin', 'v', undefined, 'true'),
+    ).rejects.toBeInstanceOf(InvalidEnvDependentError);
     const ns = await repository.findByName('users');
     expect(ns?.hasEntry('admin')).toBe(false);
   });
@@ -205,6 +234,56 @@ describe('UpdateEntryUseCase', () => {
     ns!.stamp('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z');
     const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', {
       description: 'docs',
+    });
+    expect(dto.created_at).toBe('2020-01-01T00:00:00.000Z');
+    expect(dto.modified_at).not.toBe('2020-01-01T00:00:00.000Z');
+    const reloaded = await repository.findByName('users');
+    expect(reloaded?.modifiedAt).not.toBe('2020-01-01T00:00:00.000Z');
+  });
+
+  it('GIVEN an env-dependence-only change WHEN updated THEN name, value, and description are kept', async () => {
+    await new UpdateEntryUseCase(repository).execute('users', 'admin', { description: 'docs' });
+    const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', {
+      envDependent: true,
+    });
+    expect(dto).toMatchObject({
+      name: 'admin',
+      value: 'original',
+      description: 'docs',
+      env_dependent: true,
+    });
+    const ns = await repository.findByName('users');
+    expect(ns?.getEntry('admin').envDependent).toBe(true);
+  });
+
+  it('GIVEN an env-dependent entry WHEN updated without the flag THEN it is preserved', async () => {
+    await new UpdateEntryUseCase(repository).execute('users', 'admin', { envDependent: true });
+    const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', { value: 'v2' });
+    expect(dto).toMatchObject({ value: 'v2', env_dependent: true });
+  });
+
+  it('GIVEN an env-dependent entry WHEN updated with false THEN the flag is cleared', async () => {
+    await new UpdateEntryUseCase(repository).execute('users', 'admin', { envDependent: true });
+    const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', {
+      envDependent: false,
+    });
+    expect(dto.env_dependent).toBe(false);
+  });
+
+  it('GIVEN a non-boolean env dependence WHEN updated THEN it throws and the entry is unchanged', async () => {
+    await expect(
+      new UpdateEntryUseCase(repository).execute('users', 'admin', { envDependent: 'true' }),
+    ).rejects.toBeInstanceOf(InvalidEnvDependentError);
+    const ns = await repository.findByName('users');
+    expect(ns?.getEntry('admin').envDependent).toBe(false);
+  });
+
+  it('GIVEN an env-dependence-only change WHEN updated THEN entry and namespace modified_at refresh', async () => {
+    const ns = await repository.findByName('users');
+    ns!.getEntry('admin').stamp('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z');
+    ns!.stamp('2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z');
+    const dto = await new UpdateEntryUseCase(repository).execute('users', 'admin', {
+      envDependent: true,
     });
     expect(dto.created_at).toBe('2020-01-01T00:00:00.000Z');
     expect(dto.modified_at).not.toBe('2020-01-01T00:00:00.000Z');

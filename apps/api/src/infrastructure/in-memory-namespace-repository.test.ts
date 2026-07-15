@@ -168,6 +168,56 @@ describe('InMemoryNamespaceRepository timestamps', () => {
     expect(stored.getEntry('k').description).toBe('entry doc');
   });
 
+  it('GIVEN an entry env_dependent is updated WHEN saved THEN entry created stays stable while modified advances', async () => {
+    await seedUsers();
+    const seed = (await repository.findByName('users'))!;
+    seed.addEntry(Entry.create('k', 'v', 'docs'));
+    await repository.save(seed);
+
+    const stored = (await repository.findByName('users'))!;
+    const originalCreated = stored.getEntry('k').createdAt;
+    const originalNamespaceModified = stored.modifiedAt;
+
+    stored.replaceEntry('k', Entry.create('k', 'v', 'docs', true));
+    await repository.save(stored);
+
+    const updated = (await repository.findByName('users'))!;
+    const entry = updated.getEntry('k');
+    expect(entry.envDependent).toBe(true);
+    expect(entry.value).toBe('v');
+    expect(entry.description).toBe('docs');
+    expect(entry.createdAt).toBe(originalCreated);
+    expect(entry.modifiedAt > originalCreated).toBe(true);
+    expect(updated.modifiedAt > originalNamespaceModified).toBe(true);
+  });
+
+  it('GIVEN an unchanged env-dependent entry WHEN saved THEN its timestamps are untouched', async () => {
+    await seedUsers();
+    const seed = (await repository.findByName('users'))!;
+    seed.addEntry(Entry.create('k', 'v', undefined, true));
+    await repository.save(seed);
+
+    const stored = (await repository.findByName('users'))!;
+    const beforeModified = stored.getEntry('k').modifiedAt;
+
+    await repository.save(stored);
+
+    const updated = (await repository.findByName('users'))!;
+    expect(updated.getEntry('k').envDependent).toBe(true);
+    expect(updated.getEntry('k').modifiedAt).toBe(beforeModified);
+  });
+
+  it('GIVEN env_dependent entries WHEN imported THEN the flags are stored', async () => {
+    const incoming = Namespace.create('users');
+    incoming.addEntry(Entry.create('db-host', 'localhost', undefined, true));
+    incoming.addEntry(Entry.create('retries', '3'));
+    await repository.importNamespaces([incoming]);
+
+    const stored = (await repository.findByName('users'))!;
+    expect(stored.getEntry('db-host').envDependent).toBe(true);
+    expect(stored.getEntry('retries').envDependent).toBe(false);
+  });
+
   it('GIVEN an entry is deleted WHEN saved THEN the namespace modified timestamp changes', async () => {
     await seedUsers();
     const seed = (await repository.findByName('users'))!;

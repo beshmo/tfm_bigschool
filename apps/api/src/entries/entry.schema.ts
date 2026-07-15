@@ -29,6 +29,13 @@ export class EntryResponse {
   description?: string;
 
   @ApiProperty({
+    description:
+      'Whether the value is specific to one deployment environment and needs review after being imported elsewhere. Always present; entries stored without the marker read back as false.',
+    example: false,
+  })
+  env_dependent!: boolean;
+
+  @ApiProperty({
     description: 'When the entry was first created.',
     format: 'date-time',
     example: '2026-01-01T00:00:00.000Z',

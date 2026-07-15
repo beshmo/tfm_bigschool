@@ -251,6 +251,20 @@ describe('Namespace', () => {
     expect(copy.getEntry('k').description).toBe('entry doc');
   });
 
+  it('GIVEN an env-dependent entry WHEN the namespace is cloned THEN the flag is copied', () => {
+    const ns = Namespace.rehydrate('a', '2019-01-01T00:00:00.000Z', '2021-01-01T00:00:00.000Z', [
+      Entry.rehydrate(
+        'k',
+        'v',
+        '2020-01-01T00:00:00.000Z',
+        '2020-06-01T00:00:00.000Z',
+        undefined,
+        true,
+      ),
+    ]);
+    expect(ns.clone().getEntry('k').envDependent).toBe(true);
+  });
+
   it('GIVEN a namespace with a description WHEN converted to DTO THEN the description is included', () => {
     const ns = Namespace.rehydrate(
       'a',
@@ -305,12 +319,14 @@ describe('Namespace', () => {
         {
           name: 'a',
           value: '1',
+          env_dependent: false,
           created_at: '2020-01-01T00:00:00.000Z',
           modified_at: '2020-01-01T00:00:00.000Z',
         },
         {
           name: 'b',
           value: '2',
+          env_dependent: false,
           created_at: '2020-01-01T00:00:00.000Z',
           modified_at: '2020-01-01T00:00:00.000Z',
         },

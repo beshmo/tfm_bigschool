@@ -6,6 +6,7 @@ import type { EntryChangesInput, NamespaceChangesInput, OkvnsApi } from '../api/
 interface FakeEntry {
   value: string;
   description?: string;
+  env_dependent: boolean;
   created_at: string;
   modified_at: string;
 }
@@ -25,6 +26,7 @@ export interface SeedNamespace {
     name: string;
     value: string;
     description?: string;
+    env_dependent?: boolean;
     created_at?: string;
     modified_at?: string;
   }>;
@@ -66,6 +68,7 @@ export class FakeOkvnsApi implements OkvnsApi {
             {
               value: e.value,
               description: normalize(e.description),
+              env_dependent: e.env_dependent ?? false,
               created_at: e.created_at ?? DEFAULT_TS,
               modified_at: e.modified_at ?? DEFAULT_TS,
             },
@@ -87,6 +90,7 @@ export class FakeOkvnsApi implements OkvnsApi {
           name: entryName,
           value: entry.value,
           ...(entry.description === undefined ? {} : { description: entry.description }),
+          env_dependent: entry.env_dependent,
           created_at: entry.created_at,
           modified_at: entry.modified_at,
         }))
@@ -158,6 +162,7 @@ export class FakeOkvnsApi implements OkvnsApi {
     name: string,
     value: string,
     description?: string,
+    envDependent?: boolean,
   ): Promise<EntryDto> {
     const ns = this.assertNamespace(namespace);
     if (ns.entries.has(name)) {
@@ -168,6 +173,7 @@ export class FakeOkvnsApi implements OkvnsApi {
     ns.entries.set(name, {
       value,
       description: normalize(description),
+      env_dependent: envDependent ?? false,
       created_at: timestamp,
       modified_at: timestamp,
     });
@@ -194,6 +200,7 @@ export class FakeOkvnsApi implements OkvnsApi {
       value: nextValue,
       description:
         changes.description === undefined ? existing.description : normalize(changes.description),
+      env_dependent: changes.env_dependent ?? existing.env_dependent,
       created_at: existing.created_at,
       modified_at: timestamp,
     });

@@ -6,6 +6,8 @@ export interface EntryChangesInput {
   value?: string;
   /** A blank description clears the stored one; omit it to keep the current one. */
   description?: string;
+  /** Omit to keep the stored environment-dependence marker. */
+  env_dependent?: boolean;
 }
 
 /** Partial namespace update: a name, a description, or both. */
@@ -28,6 +30,7 @@ export interface OkvnsApi {
     name: string,
     value: string,
     description?: string,
+    envDependent?: boolean,
   ): Promise<EntryDto>;
   updateEntry(namespace: string, name: string, changes: EntryChangesInput): Promise<EntryDto>;
   deleteEntry(namespace: string, name: string): Promise<void>;
@@ -112,11 +115,17 @@ export class HttpOkvnsApi implements OkvnsApi {
     name: string,
     value: string,
     description?: string,
+    envDependent?: boolean,
   ): Promise<EntryDto> {
     return this.request(`/namespaces/${encodeURIComponent(namespace)}/entries`, {
       method: 'POST',
       headers: JSON_HEADERS,
-      body: JSON.stringify({ name, value, ...(description === undefined ? {} : { description }) }),
+      body: JSON.stringify({
+        name,
+        value,
+        ...(description === undefined ? {} : { description }),
+        ...(envDependent === undefined ? {} : { env_dependent: envDependent }),
+      }),
     });
   }
 

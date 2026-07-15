@@ -55,7 +55,13 @@ export class EntriesController {
     @Param('namespace', NameParamPipe) namespace: string,
     @Body() body: CreateEntryDto,
   ): Promise<EntryDto> {
-    return this.createEntry.execute(namespace, body.name, body.value, body.description);
+    return this.createEntry.execute(
+      namespace,
+      body.name,
+      body.value,
+      body.description,
+      body.env_dependent,
+    );
   }
 
   @Get(':name')
@@ -72,7 +78,9 @@ export class EntriesController {
   }
 
   @Put(':name')
-  @ApiOperation({ summary: 'Update an entry name, value, and/or description.' })
+  @ApiOperation({
+    summary: 'Update an entry name, value, description, and/or environment-dependence marker.',
+  })
   @ApiParam({ name: 'name', description: 'Entry name.', example: 'admin' })
   @ApiOkResponse({ type: EntryResponse })
   @ApiBadRequestError()
@@ -87,6 +95,7 @@ export class EntriesController {
       name: body.name,
       value: body.value,
       description: body.description,
+      envDependent: body.env_dependent,
     });
   }
 

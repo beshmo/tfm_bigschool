@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import {
   DESCRIPTION_MAX_LENGTH,
   ENTRY_VALUE_MAX_LENGTH,
@@ -39,6 +39,16 @@ export class CreateEntryDto {
   @IsString()
   @MaxLength(DESCRIPTION_MAX_LENGTH)
   description?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Marks a value as specific to one deployment environment, so it can be found and reviewed after being imported elsewhere. Omitted means false.',
+    default: false,
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  env_dependent?: boolean;
 }
 
 export class UpdateEntryDto {
@@ -75,4 +85,13 @@ export class UpdateEntryDto {
   @IsString()
   @MaxLength(DESCRIPTION_MAX_LENGTH)
   description?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'New environment-dependence marker. Omitting the field keeps the stored value; false clears the marker.',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  env_dependent?: boolean;
 }

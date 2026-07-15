@@ -8,6 +8,7 @@ export interface EntryChanges {
   name?: unknown;
   value?: unknown;
   description?: unknown;
+  envDependent?: unknown;
 }
 
 export class CreateEntryUseCase {
@@ -18,12 +19,13 @@ export class CreateEntryUseCase {
     name: unknown,
     value: unknown,
     description?: unknown,
+    envDependent?: unknown,
   ): Promise<EntryDto> {
     const namespace = await this.repository.findByName(namespaceName);
     if (!namespace) {
       throw new NamespaceNotFoundError(namespaceName);
     }
-    const entry = Entry.create(name, value, description);
+    const entry = Entry.create(name, value, description, envDependent);
     namespace.addEntry(entry);
     await this.repository.save(namespace);
     return entry.toDto();
@@ -72,7 +74,9 @@ export class UpdateEntryUseCase {
     // An omitted description keeps the current one; a blank one clears it.
     const nextDescription =
       changes.description === undefined ? existing.description : changes.description;
-    const updated = Entry.create(nextName, nextValue, nextDescription);
+    const nextEnvDependent =
+      changes.envDependent === undefined ? existing.envDependent : changes.envDependent;
+    const updated = Entry.create(nextName, nextValue, nextDescription, nextEnvDependent);
     namespace.replaceEntry(entryName, updated);
     await this.repository.save(namespace);
     return updated.toDto();

@@ -3,6 +3,7 @@ import { Entry } from './entry.js';
 import {
   InvalidDescriptionError,
   InvalidEntryValueError,
+  InvalidEnvDependentError,
   InvalidResourceNameError,
 } from './errors.js';
 
@@ -126,6 +127,7 @@ describe('Entry', () => {
     expect(entry.toDto()).toEqual({
       name: 'k',
       value: 'v',
+      env_dependent: false,
       created_at: '2020-01-01T00:00:00.000Z',
       modified_at: '2021-01-01T00:00:00.000Z',
     });
@@ -143,8 +145,54 @@ describe('Entry', () => {
       name: 'k',
       value: 'v',
       description: 'docs',
+      env_dependent: false,
       created_at: '2020-01-01T00:00:00.000Z',
       modified_at: '2021-01-01T00:00:00.000Z',
     });
+  });
+
+  it('GIVEN no env dependence WHEN created THEN it defaults to false', () => {
+    expect(Entry.create('k', 'v').envDependent).toBe(false);
+  });
+
+  it('GIVEN env dependence true WHEN created THEN it is kept', () => {
+    expect(Entry.create('k', 'v', undefined, true).envDependent).toBe(true);
+  });
+
+  it('GIVEN a null env dependence WHEN created THEN it normalizes to false', () => {
+    expect(Entry.create('k', 'v', undefined, null).envDependent).toBe(false);
+  });
+
+  it('GIVEN a non-boolean env dependence WHEN created THEN it throws InvalidEnvDependentError', () => {
+    expect(() => Entry.create('k', 'v', undefined, 'true')).toThrow(InvalidEnvDependentError);
+  });
+
+  it('GIVEN stored state with env dependence WHEN rehydrated THEN the flag is restored', () => {
+    const entry = Entry.rehydrate(
+      'k',
+      'v',
+      '2020-01-01T00:00:00.000Z',
+      '2021-01-01T00:00:00.000Z',
+      undefined,
+      true,
+    );
+    expect(entry.envDependent).toBe(true);
+  });
+
+  it('GIVEN an env-dependent entry WHEN withValue omits the flag THEN it is preserved', () => {
+    const updated = Entry.create('k', 'a', undefined, true).withValue('b');
+    expect(updated.envDependent).toBe(true);
+    expect(updated.value).toBe('b');
+  });
+
+  it('GIVEN an env-dependent entry WHEN withValue passes false THEN the flag is cleared', () => {
+    expect(
+      Entry.create('k', 'a', undefined, true).withValue('a', undefined, false).envDependent,
+    ).toBe(false);
+  });
+
+  it('GIVEN an env-dependent entry WHEN converted to DTO THEN env_dependent is true', () => {
+    const entry = Entry.create('k', 'v', undefined, true);
+    expect(entry.toDto().env_dependent).toBe(true);
   });
 });

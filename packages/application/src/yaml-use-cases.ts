@@ -18,7 +18,7 @@ export class ImportYamlUseCase {
       const namespace = Namespace.create(namespaceDto.name, namespaceDto.description);
       namespace.setEntries(
         namespaceDto.entries.map((entry) =>
-          Entry.create(entry.name, entry.value, entry.description),
+          Entry.create(entry.name, entry.value, entry.description, entry.envDependent),
         ),
       );
       return namespace;

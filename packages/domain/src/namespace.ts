@@ -168,6 +168,7 @@ export class Namespace {
         entry.createdAt,
         entry.modifiedAt,
         entry.description,
+        entry.envDependent,
       ),
     );
     return Namespace.rehydrate(

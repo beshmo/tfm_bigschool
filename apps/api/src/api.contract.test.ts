@@ -324,6 +324,82 @@ describe('Entry endpoints', () => {
     expect(res.body[0].description).toBe('docs');
   });
 
+  it('POST stores an entry env_dependent marker', async () => {
+    const res = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'db-host', value: 'localhost', env_dependent: true });
+    expect(res.status).toBe(201);
+    expect(res.body.env_dependent).toBe(true);
+    expect((await http.get('/namespaces/users/entries/db-host')).body.env_dependent).toBe(true);
+  });
+
+  it('POST defaults a missing env_dependent to false', async () => {
+    const res = await http.post('/namespaces/users/entries').send({ name: 'admin', value: 'v' });
+    expect(res.status).toBe(201);
+    expect(res.body.env_dependent).toBe(false);
+    expect((await http.get('/namespaces/users/entries/admin')).body.env_dependent).toBe(false);
+  });
+
+  it('POST rejects a non-boolean env_dependent with a safe 400', async () => {
+    const res = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', env_dependent: 'true' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error).not.toHaveProperty('stack');
+  });
+
+  it('GET lists entries with env_dependent', async () => {
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'db-host', value: 'localhost', env_dependent: true });
+    await http.post('/namespaces/users/entries').send({ name: 'retries', value: '3' });
+    const res = await http.get('/namespaces/users/entries');
+    expect(res.body).toMatchObject([
+      { name: 'db-host', env_dependent: true },
+      { name: 'retries', env_dependent: false },
+    ]);
+  });
+
+  it('PUT updates only env_dependent preserving name, value, and created_at', async () => {
+    const created = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', description: 'docs' });
+    const res = await http.put('/namespaces/users/entries/admin').send({ env_dependent: true });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      name: 'admin',
+      value: 'v',
+      description: 'docs',
+      env_dependent: true,
+    });
+    expect(res.body.created_at).toBe(created.body.created_at);
+    expect(res.body.modified_at >= created.body.modified_at).toBe(true);
+  });
+
+  it('PUT preserves env_dependent when updating only the value', async () => {
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', env_dependent: true });
+    const res = await http.put('/namespaces/users/entries/admin').send({ value: 'v2' });
+    expect(res.body).toMatchObject({ value: 'v2', env_dependent: true });
+  });
+
+  it('PUT clears env_dependent with false', async () => {
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'v', env_dependent: true });
+    const res = await http.put('/namespaces/users/entries/admin').send({ env_dependent: false });
+    expect(res.body.env_dependent).toBe(false);
+  });
+
+  it('PUT rejects a non-boolean env_dependent with a safe 400', async () => {
+    await http.post('/namespaces/users/entries').send({ name: 'admin', value: 'v' });
+    const res = await http.put('/namespaces/users/entries/admin').send({ env_dependent: 1 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('PUT updates only the description preserving name, value, and created_at', async () => {
     const created = await http
       .post('/namespaces/users/entries')
@@ -522,6 +598,54 @@ describe('YAML endpoints', () => {
     const plain = await http.get('/yaml/export/plain');
     expect(plain.body.yaml).not.toContain('description');
   });
+
+  it('POST /yaml/import imports entry env_dependent and defaults omitted values to false', async () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: db-host
+        value: localhost
+        env_dependent: true
+      - name: retries
+        value: "3"`;
+    const res = await http.post('/yaml/import').send({ yaml });
+    expect(res.status).toBe(201);
+    expect(res.body.namespaces[0].entries).toMatchObject([
+      { name: 'db-host', env_dependent: true },
+      { name: 'retries', env_dependent: false },
+    ]);
+    expect((await http.get('/namespaces/users/entries/db-host')).body.env_dependent).toBe(true);
+    expect((await http.get('/namespaces/users/entries/retries')).body.env_dependent).toBe(false);
+  });
+
+  it('POST /yaml/import returns 400 for a non-boolean env_dependent', async () => {
+    const yaml = `namespaces:
+  - name: users
+    entries:
+      - name: admin
+        value: secret
+        env_dependent: "true"`;
+    const res = await http.post('/yaml/import').send({ yaml });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('INVALID_YAML');
+    expect((await http.get('/namespaces/users')).status).toBe(404);
+  });
+
+  it('GET /yaml/export includes env_dependent for every entry', async () => {
+    await http.post('/namespaces').send({ name: 'users' });
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'db-host', value: 'localhost', env_dependent: true });
+    await http.post('/namespaces/users/entries').send({ name: 'retries', value: '3' });
+
+    const res = await http.get('/yaml/export');
+    expect(res.body.yaml).toContain('env_dependent: true');
+    expect(res.body.yaml).toContain('env_dependent: false');
+
+    const selected = await http.get('/yaml/export/users');
+    expect(selected.body.yaml).toContain('env_dependent: true');
+    expect(selected.body.yaml).toContain('env_dependent: false');
+  });
 });
 
 describe('OpenAPI document', () => {
@@ -614,6 +738,31 @@ describe('OpenAPI document', () => {
     }
 
     // The YAML import response carries descriptions transitively via
+    // NamespaceResponse, asserted above.
+    expect(schemas.YamlImportResponse.properties.namespaces.items.$ref).toContain(
+      'NamespaceResponse',
+    );
+  });
+
+  it('documents the entry env_dependent field as a required boolean response and optional request', async () => {
+    const { body } = await http.get('/docs-json');
+    const schemas = body.components.schemas;
+
+    // Responses always carry the marker, so it is required there.
+    expect(schemas.EntryResponse.properties.env_dependent.type).toBe('boolean');
+    expect(schemas.EntryResponse.required).toContain('env_dependent');
+
+    // Requests may omit it on create (defaults to false) and on update (keeps
+    // the stored value).
+    for (const schema of ['CreateEntryDto', 'UpdateEntryDto']) {
+      expect(schemas[schema].properties.env_dependent.type).toBe('boolean');
+      expect(schemas[schema].required ?? []).not.toContain('env_dependent');
+    }
+
+    // The marker is entry-level only; namespaces do not carry it.
+    expect(schemas.NamespaceResponse.properties).not.toHaveProperty('env_dependent');
+
+    // The YAML import response carries the marker transitively via
     // NamespaceResponse, asserted above.
     expect(schemas.YamlImportResponse.properties.namespaces.items.$ref).toContain(
       'NamespaceResponse',
