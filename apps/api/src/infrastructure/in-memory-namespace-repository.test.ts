@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Entry, Namespace } from '@okvns/domain';
+import type { EntryListQuery, NamespaceListQuery } from '@okvns/shared';
 import { InMemoryNamespaceRepository } from './in-memory-namespace-repository';
 
 /**
@@ -258,5 +259,94 @@ describe('InMemoryNamespaceRepository timestamps', () => {
     expect(stored.createdAt).toBe(original);
     expect(stored.modifiedAt > original).toBe(true);
     expect(stored.getEntry('fresh').createdAt).toEqual(expect.any(String));
+  });
+});
+
+/**
+ * The filter/order/page semantics themselves live in the application layer's
+ * shared list-query helpers and are covered there; these cover what the adapter
+ * itself owns — applying the query to the store and detaching what it hands out.
+ */
+describe('InMemoryNamespaceRepository list queries', () => {
+  let repository: InMemoryNamespaceRepository;
+
+  const namespaceQuery: NamespaceListQuery = {
+    page: 1,
+    page_size: 10,
+    sort: 'name',
+    direction: 'asc',
+  };
+  const entryQuery: EntryListQuery = { page: 1, page_size: 10, sort: 'name', direction: 'asc' };
+
+  beforeEach(() => {
+    repository = new InMemoryNamespaceRepository(tickingClock());
+  });
+
+  it('GIVEN stored namespaces WHEN a page is listed THEN it is filtered, ordered, and totalled', async () => {
+    await repository.create(Namespace.create('zeta'));
+    await repository.create(Namespace.create('alpha'));
+    await repository.create(Namespace.create('other'));
+
+    const result = await repository.listPage({ ...namespaceQuery, name: 'a' });
+    expect(result.items.map((n) => n.name)).toEqual(['alpha', 'zeta']);
+    expect(result.totalItems).toBe(2);
+  });
+
+  it('GIVEN a namespace with entries WHEN listed THEN its summary carries metadata but no entries', async () => {
+    const namespace = Namespace.create('users', 'the users');
+    namespace.addEntry(Entry.create('admin', 'secret'));
+    await repository.create(namespace);
+
+    const result = await repository.listPage(namespaceQuery);
+    expect(result.items[0]).toEqual({
+      name: 'users',
+      description: 'the users',
+      createdAt: expect.any(String),
+      modifiedAt: expect.any(String),
+    });
+  });
+
+  it('GIVEN more namespaces than a page holds WHEN paged THEN each page slices the ordered result', async () => {
+    for (const name of ['a', 'b', 'c']) {
+      await repository.create(Namespace.create(name));
+    }
+    const paged = { ...namespaceQuery, page_size: 10 as const, page: 2 };
+    const result = await repository.listPage(paged);
+    expect(result.items).toEqual([]);
+    expect(result.totalItems).toBe(3);
+  });
+
+  it('GIVEN a namespace WHEN its entries are paged THEN they are filtered and totalled', async () => {
+    const namespace = Namespace.create('users');
+    namespace.addEntry(Entry.create('db-host', 'localhost', undefined, true));
+    namespace.addEntry(Entry.create('db-port', '5432'));
+    namespace.addEntry(Entry.create('retries', '3'));
+    await repository.create(namespace);
+
+    const result = await repository.listEntriesPage('users', { ...entryQuery, name: 'db' });
+    expect(result?.items.map((e) => e.name)).toEqual(['db-host', 'db-port']);
+    expect(result?.totalItems).toBe(2);
+
+    const dependent = await repository.listEntriesPage('users', {
+      ...entryQuery,
+      env_dependent: true,
+    });
+    expect(dependent?.items.map((e) => e.name)).toEqual(['db-host']);
+  });
+
+  it('GIVEN a missing namespace WHEN its entries are paged THEN it reports absence as null', async () => {
+    expect(await repository.listEntriesPage('missing', entryQuery)).toBeNull();
+  });
+
+  it('GIVEN a listed entry WHEN mutated THEN the stored namespace is unaffected', async () => {
+    const namespace = Namespace.create('users');
+    namespace.addEntry(Entry.create('admin', 'secret'));
+    await repository.create(namespace);
+
+    const page = await repository.listEntriesPage('users', entryQuery);
+    page!.items[0].stamp('1999-01-01T00:00:00.000Z', '1999-01-01T00:00:00.000Z');
+
+    const stored = await repository.findByName('users');
+    expect(stored!.getEntry('admin').createdAt).not.toBe('1999-01-01T00:00:00.000Z');
   });
 });

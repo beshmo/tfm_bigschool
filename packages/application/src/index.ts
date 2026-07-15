@@ -1,4 +1,5 @@
-export { type NamespaceRepository } from './ports.js';
+export { type NamespaceRepository, type NamespaceSummary, type PageResult } from './ports.js';
+export { queryNamespaces, queryEntries } from './list-query.js';
 export {
   type NamespaceChanges,
   CreateNamespaceUseCase,

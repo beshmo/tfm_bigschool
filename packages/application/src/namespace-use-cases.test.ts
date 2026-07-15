@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   DuplicateNamespaceError,
   EmptyNamespaceUpdateError,
+  Entry,
   InvalidDescriptionError,
   InvalidResourceNameError,
   Namespace,
   NamespaceNotFoundError,
 } from '@okvns/domain';
+import type { NamespaceListQuery } from '@okvns/shared';
 import { FakeNamespaceRepository } from './testing/fake-namespace-repository.js';
 import {
   CreateNamespaceUseCase,
@@ -63,11 +65,63 @@ describe('CreateNamespaceUseCase', () => {
 });
 
 describe('ListNamespacesUseCase', () => {
-  it('GIVEN namespaces WHEN listed THEN they are returned in name order', async () => {
+  const query: NamespaceListQuery = {
+    page: 1,
+    page_size: 10,
+    sort: 'name',
+    direction: 'asc',
+  };
+
+  it('GIVEN namespaces WHEN listed THEN they are returned in name order with page metadata', async () => {
     await repository.save(Namespace.create('zeta'));
     await repository.save(Namespace.create('alpha'));
-    const result = await new ListNamespacesUseCase(repository).execute();
-    expect(result.map((n) => n.name)).toEqual(['alpha', 'zeta']);
+    const result = await new ListNamespacesUseCase(repository).execute(query);
+    expect(result.items.map((n) => n.name)).toEqual(['alpha', 'zeta']);
+    expect(result).toMatchObject({ page: 1, page_size: 10, total_items: 2, total_pages: 1 });
+  });
+
+  it('GIVEN a namespace WHEN listed THEN the item omits entries and carries its metadata', async () => {
+    const namespace = Namespace.create('users', 'the users');
+    namespace.addEntry(Entry.create('admin', 'secret'));
+    await repository.save(namespace);
+    const result = await new ListNamespacesUseCase(repository).execute(query);
+    expect(result.items[0]).toEqual({
+      name: 'users',
+      description: 'the users',
+      created_at: expect.any(String),
+      modified_at: expect.any(String),
+    });
+    expect(result.items[0]).not.toHaveProperty('entries');
+  });
+
+  it('GIVEN a namespace without a description WHEN listed THEN the field is absent', async () => {
+    await repository.save(Namespace.create('users'));
+    const result = await new ListNamespacesUseCase(repository).execute(query);
+    expect(result.items[0]).not.toHaveProperty('description');
+  });
+
+  it('GIVEN more namespaces than fit a page WHEN a later page is listed THEN it reports the full total', async () => {
+    for (const name of ['a', 'b', 'c']) {
+      await repository.save(Namespace.create(name));
+    }
+    const result = await new ListNamespacesUseCase(repository).execute({
+      ...query,
+      page: 2,
+      page_size: 10,
+    });
+    expect(result.items).toEqual([]);
+    expect(result).toMatchObject({ page: 2, total_items: 3, total_pages: 1 });
+  });
+
+  it('GIVEN no namespaces WHEN listed THEN the page is empty and reports no pages', async () => {
+    const result = await new ListNamespacesUseCase(repository).execute(query);
+    expect(result).toEqual({
+      items: [],
+      page: 1,
+      page_size: 10,
+      total_items: 0,
+      total_pages: 0,
+    });
   });
 });
 

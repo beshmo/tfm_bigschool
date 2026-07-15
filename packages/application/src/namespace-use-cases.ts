@@ -3,9 +3,14 @@ import {
   Namespace,
   NamespaceNotFoundError,
   ResourceName,
-  compareNames,
 } from '@okvns/domain';
-import { type NamespaceDto } from '@okvns/shared';
+import {
+  totalPages,
+  type NamespaceDto,
+  type NamespaceListItemDto,
+  type NamespaceListQuery,
+  type PaginatedResultDto,
+} from '@okvns/shared';
 import { type NamespaceRepository } from './ports.js';
 
 /** Partial changes for a namespace update; unset fields keep their current
@@ -30,11 +35,26 @@ export class CreateNamespaceUseCase {
 export class ListNamespacesUseCase {
   constructor(private readonly repository: NamespaceRepository) {}
 
-  async execute(): Promise<NamespaceDto[]> {
-    const namespaces = await this.repository.list();
-    return namespaces
-      .sort((a, b) => compareNames(a.name, b.name))
-      .map((namespace) => namespace.toDto());
+  /**
+   * Returns one page of namespaces. `query` is expected to already be validated
+   * and normalized by the API boundary — the repository maps its sort field and
+   * direction onto fixed storage-level fragments, so unvetted values must never
+   * reach here.
+   */
+  async execute(query: NamespaceListQuery): Promise<PaginatedResultDto<NamespaceListItemDto>> {
+    const { items, totalItems } = await this.repository.listPage(query);
+    return {
+      items: items.map((namespace) => ({
+        name: namespace.name,
+        ...(namespace.description === undefined ? {} : { description: namespace.description }),
+        created_at: namespace.createdAt,
+        modified_at: namespace.modifiedAt,
+      })),
+      page: query.page,
+      page_size: query.page_size,
+      total_items: totalItems,
+      total_pages: totalPages(totalItems, query.page_size),
+    };
   }
 }
 
