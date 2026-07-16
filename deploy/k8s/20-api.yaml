@@ -21,7 +21,7 @@ spec:
       # succeed. Migrations are idempotent, so re-running on each pod start is safe.
       initContainers:
         - name: migrate
-          image: okvns/api:latest
+          image: beshmo/okvns:okvns-api-1.0.0
           imagePullPolicy: IfNotPresent
           command: ['node', 'scripts/migrate.mjs']
           envFrom:
@@ -40,8 +40,7 @@ spec:
                   key: MYSQL_PASSWORD
       containers:
         - name: api
-          # Build locally: docker build -f apps/api/Dockerfile -t okvns/api:latest .
-          image: okvns/api:latest
+          image: beshmo/okvns:okvns-api-1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

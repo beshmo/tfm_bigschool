@@ -1,0 +1,137 @@
+namespace:
+  create: true
+  name: okvns
+
+partOf: okvns
+
+mysql:
+  name: okvns-mysql
+  secretName: okvns-mysql-secret
+  image:
+    repository: mysql
+    tag: "8.4"
+    pullPolicy: IfNotPresent
+  database: okvns
+  credentials:
+    rootPassword: change-me-root
+    user: okvns
+    password: change-me-app
+  service:
+    port: 3306
+  persistence:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: 2Gi
+    emptyDir:
+      sizeLimit: 2Gi
+  livenessProbe:
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    command:
+      - mysqladmin
+      - ping
+      - -h
+      - localhost
+      - -uroot
+      - -p$(MYSQL_ROOT_PASSWORD)
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    command:
+      - mysqladmin
+      - ping
+      - -h
+      - localhost
+      - -uroot
+      - -p$(MYSQL_ROOT_PASSWORD)
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+      ephemeral-storage: 1Gi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+      ephemeral-storage: 2Gi
+
+api:
+  name: okvns-api
+  replicas: 1
+  image:
+    repository: beshmo/okvns
+    tag: okvns-api-1.0.0
+    pullPolicy: IfNotPresent
+  command:
+    migrate:
+      - node
+      - scripts/migrate.mjs
+  configName: okvns-api-config
+  config:
+    OKVNS_API_PORT: "3000"
+    OKVNS_CORS_ORIGIN: "*"
+    OKVNS_STORAGE_DRIVER: mysql
+    OKVNS_MYSQL_HOST: okvns-mysql
+    OKVNS_MYSQL_PORT: "3306"
+    OKVNS_MYSQL_DATABASE: okvns
+  service:
+    port: 3000
+  containerPort: 3000
+  livenessProbe:
+    path: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  readinessProbe:
+    path: /ready
+    initialDelaySeconds: 3
+    periodSeconds: 10
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+      ephemeral-storage: 512Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+      ephemeral-storage: 1Gi
+
+adminWeb:
+  name: okvns-admin-web
+  replicas: 1
+  image:
+    repository: beshmo/okvns
+    tag: okvns-admin-web-1.0.0
+    pullPolicy: IfNotPresent
+  configName: okvns-web-config
+  config:
+    OKVNS_API_BASE_URL: http://localhost:3000
+  service:
+    port: 80
+  containerPort: 8080
+  livenessProbe:
+    path: /
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  readinessProbe:
+    path: /
+    initialDelaySeconds: 3
+    periodSeconds: 10
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+      ephemeral-storage: 256Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+      ephemeral-storage: 512Mi
+
+ingress:
+  enabled: true
+  name: okvns
+  className: ""
+  annotations:
+    okvns.dev/placeholder: "true"
+  host: okvns.example.com
+  apiPath: /api
+  webPath: /
