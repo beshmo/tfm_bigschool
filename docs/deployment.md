@@ -96,7 +96,8 @@ The manifests create:
 
 The MySQL `PersistentVolumeClaim` keeps namespace/entry data across API pod
 restarts and rescheduling. Restarting or replacing the API pod does not clear
-data; deleting the PVC does.
+data; deleting the PVC does. The reference manifests set
+`storageClassName: do-block-storage` for DigitalOcean Kubernetes block storage.
 
 ## Helm
 
@@ -138,6 +139,10 @@ helm upgrade --install okvns deploy/helm/okvns \
   --set api.image.tag=okvns-api-1.0.1 \
   --set adminWeb.image.tag=okvns-admin-web-1.0.1
 ```
+
+The chart defaults MySQL persistence to the DigitalOcean Kubernetes block
+storage class, `do-block-storage`. Override `mysql.persistence.storageClassName`
+when deploying to a cluster with a different storage class.
 
 Before deploying outside a local/dev cluster, replace the placeholder MySQL
 credentials in `deploy/helm/okvns/values.yaml` or provide overrides for

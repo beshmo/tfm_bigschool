@@ -110,6 +110,7 @@ spec:
       spec:
         accessModes:
 {{ toYaml .Values.mysql.persistence.accessModes | indent 10 }}
+        storageClassName: {{ .Values.mysql.persistence.storageClassName | quote }}
         resources:
           requests:
             storage: {{ .Values.mysql.persistence.size }}
