@@ -49,6 +49,7 @@ spec:
         app.kubernetes.io/name: {{ .Values.mysql.name }}
         app.kubernetes.io/part-of: {{ include "okvns.partOf" . }}
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: mysql
           image: {{ include "okvns.mysqlImage" . }}
@@ -88,7 +89,12 @@ spec:
             initialDelaySeconds: {{ .Values.mysql.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.mysql.readinessProbe.periodSeconds }}
           resources:
-{{ toYaml .Values.mysql.resources | indent 12 }}
+            requests:
+              cpu: {{ .Values.mysql.resources.requests.cpu | quote }}
+              memory: {{ .Values.mysql.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.mysql.resources.limits.cpu | quote }}
+              memory: {{ .Values.mysql.resources.limits.memory | quote }}
 {{- if not .Values.mysql.persistence.enabled }}
       volumes:
         - name: data

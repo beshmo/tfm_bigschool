@@ -30,6 +30,7 @@ spec:
         app.kubernetes.io/name: {{ .Values.api.name }}
         app.kubernetes.io/part-of: {{ include "okvns.partOf" . }}
     spec:
+      automountServiceAccountToken: false
       initContainers:
         - name: migrate
           image: {{ include "okvns.apiImage" . }}
@@ -49,6 +50,13 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.mysql.secretName }}
                   key: MYSQL_PASSWORD
+          resources:
+            requests:
+              cpu: {{ .Values.api.resources.requests.cpu | quote }}
+              memory: {{ .Values.api.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.api.resources.limits.cpu | quote }}
+              memory: {{ .Values.api.resources.limits.memory | quote }}
       containers:
         - name: api
           image: {{ include "okvns.apiImage" . }}
@@ -83,7 +91,12 @@ spec:
             initialDelaySeconds: {{ .Values.api.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.api.readinessProbe.periodSeconds }}
           resources:
-{{ toYaml .Values.api.resources | indent 12 }}
+            requests:
+              cpu: {{ .Values.api.resources.requests.cpu | quote }}
+              memory: {{ .Values.api.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.api.resources.limits.cpu | quote }}
+              memory: {{ .Values.api.resources.limits.memory | quote }}
 ---
 apiVersion: v1
 kind: Service
