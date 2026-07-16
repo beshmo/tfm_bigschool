@@ -19,8 +19,7 @@ spec:
     spec:
       containers:
         - name: admin-web
-          # Build locally: docker build -f apps/admin-web/Dockerfile -t okvns/admin-web:latest .
-          image: okvns/admin-web:latest
+          image: beshmo/okvns:okvns-admin-web-1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

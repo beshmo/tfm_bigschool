@@ -36,20 +36,31 @@ Data persistence and restart behavior:
 
 Logs go to stdout/stderr.
 
-## Kubernetes
+## Kubernetes Manifests
 
 Manifests live in `deploy/k8s/` and deploy resources into the `okvns` namespace.
 
-Build local images:
+The manifests use the published Docker Hub images by default:
+
+| Workload  | Image                                |
+| --------- | ------------------------------------ |
+| API       | `beshmo/okvns:okvns-api-1.0.0`       |
+| Admin web | `beshmo/okvns:okvns-admin-web-1.0.0` |
+
+Apply manifests:
+
+```bash
+kubectl apply -f deploy/k8s/
+kubectl -n okvns get pods
+```
+
+To test local image builds instead, edit the image fields in `deploy/k8s/20-api.yaml`
+and `deploy/k8s/40-web.yaml`, then load the images into your cluster when required,
+for example with kind:
 
 ```bash
 docker build -f apps/api/Dockerfile -t okvns/api:latest .
 docker build -f apps/admin-web/Dockerfile -t okvns/admin-web:latest .
-```
-
-Load images into your cluster when required, for example with kind:
-
-```bash
 kind load docker-image okvns/api:latest
 kind load docker-image okvns/admin-web:latest
 ```
@@ -73,13 +84,6 @@ Docker Hub publishing requires these GitHub repository secrets:
 - `DOCKERHUB_TOKEN`: Docker Hub access token. Use an access token rather than a
   Docker Hub account password so CI credentials can be revoked independently.
 
-Apply manifests:
-
-```bash
-kubectl apply -f deploy/k8s/
-kubectl -n okvns get pods
-```
-
 The manifests create:
 
 - Namespace `okvns`
@@ -93,6 +97,52 @@ The manifests create:
 The MySQL `PersistentVolumeClaim` keeps namespace/entry data across API pod
 restarts and rescheduling. Restarting or replacing the API pod does not clear
 data; deleting the PVC does.
+
+## Helm
+
+The Helm chart lives in `deploy/helm/okvns/` and renders the same reference
+deployment as the raw Kubernetes manifests. Default values use:
+
+- API image: `beshmo/okvns:okvns-api-1.0.0`
+- Admin web image: `beshmo/okvns:okvns-admin-web-1.0.0`
+- Namespace: `okvns`
+
+Render the chart locally:
+
+```bash
+helm template okvns deploy/helm/okvns
+```
+
+Install the chart:
+
+```bash
+helm install okvns deploy/helm/okvns
+kubectl -n okvns get pods
+```
+
+The chart includes a Namespace template by default. To use a namespace that is
+managed outside the chart, disable namespace creation and set the target
+namespace explicitly:
+
+```bash
+helm install okvns deploy/helm/okvns \
+  --set namespace.create=false \
+  --set namespace.name=okvns
+```
+
+Override image tags or other runtime settings with `--set` or a custom values
+file:
+
+```bash
+helm upgrade --install okvns deploy/helm/okvns \
+  --set api.image.tag=okvns-api-1.0.1 \
+  --set adminWeb.image.tag=okvns-admin-web-1.0.1
+```
+
+Before deploying outside a local/dev cluster, replace the placeholder MySQL
+credentials in `deploy/helm/okvns/values.yaml` or provide overrides for
+`mysql.credentials.rootPassword`, `mysql.credentials.user`, and
+`mysql.credentials.password`.
 
 ## Configuration
 

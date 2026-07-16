@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.adminWeb.configName }}
+  namespace: {{ include "okvns.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.adminWeb.name }}
+    app.kubernetes.io/part-of: {{ include "okvns.partOf" . }}
+data:
+{{- range $key, $value := .Values.adminWeb.config }}
+  {{ $key }}: {{ $value | quote }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.adminWeb.name }}
+  namespace: {{ include "okvns.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.adminWeb.name }}
+    app.kubernetes.io/part-of: {{ include "okvns.partOf" . }}
+spec:
+  replicas: {{ .Values.adminWeb.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.adminWeb.name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.adminWeb.name }}
+        app.kubernetes.io/part-of: {{ include "okvns.partOf" . }}
+    spec:
+      containers:
+        - name: admin-web
+          image: {{ include "okvns.adminWebImage" . }}
+          imagePullPolicy: {{ .Values.adminWeb.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.adminWeb.containerPort }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.adminWeb.configName }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.adminWeb.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.adminWeb.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.adminWeb.livenessProbe.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.adminWeb.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.adminWeb.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.adminWeb.readinessProbe.periodSeconds }}
+          resources:
+{{ toYaml .Values.adminWeb.resources | indent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.adminWeb.name }}
+  namespace: {{ include "okvns.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.adminWeb.name }}
+    app.kubernetes.io/part-of: {{ include "okvns.partOf" . }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ .Values.adminWeb.name }}
+  ports:
+    - name: http
+      port: {{ .Values.adminWeb.service.port }}
+      targetPort: http
