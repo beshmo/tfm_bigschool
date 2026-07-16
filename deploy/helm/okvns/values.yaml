@@ -47,9 +47,11 @@ mysql:
     requests:
       cpu: 100m
       memory: 512Mi
+      ephemeral-storage: 1Gi
     limits:
       cpu: "1"
       memory: 1Gi
+      ephemeral-storage: 2Gi
 
 api:
   name: okvns-api
@@ -85,9 +87,11 @@ api:
     requests:
       cpu: 50m
       memory: 128Mi
+      ephemeral-storage: 512Mi
     limits:
       cpu: 500m
       memory: 256Mi
+      ephemeral-storage: 1Gi
 
 adminWeb:
   name: okvns-admin-web
@@ -114,9 +118,11 @@ adminWeb:
     requests:
       cpu: 25m
       memory: 64Mi
+      ephemeral-storage: 256Mi
     limits:
       cpu: 250m
       memory: 128Mi
+      ephemeral-storage: 512Mi
 
 ingress:
   enabled: true

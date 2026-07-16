@@ -57,9 +57,11 @@ spec:
             requests:
               cpu: {{ .Values.adminWeb.resources.requests.cpu | quote }}
               memory: {{ .Values.adminWeb.resources.requests.memory | quote }}
+              ephemeral-storage: {{ index .Values.adminWeb.resources.requests "ephemeral-storage" | quote }}
             limits:
               cpu: {{ .Values.adminWeb.resources.limits.cpu | quote }}
               memory: {{ .Values.adminWeb.resources.limits.memory | quote }}
+              ephemeral-storage: {{ index .Values.adminWeb.resources.limits "ephemeral-storage" | quote }}
 ---
 apiVersion: v1
 kind: Service

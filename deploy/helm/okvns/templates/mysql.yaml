@@ -92,9 +92,11 @@ spec:
             requests:
               cpu: {{ .Values.mysql.resources.requests.cpu | quote }}
               memory: {{ .Values.mysql.resources.requests.memory | quote }}
+              ephemeral-storage: {{ index .Values.mysql.resources.requests "ephemeral-storage" | quote }}
             limits:
               cpu: {{ .Values.mysql.resources.limits.cpu | quote }}
               memory: {{ .Values.mysql.resources.limits.memory | quote }}
+              ephemeral-storage: {{ index .Values.mysql.resources.limits "ephemeral-storage" | quote }}
 {{- if not .Values.mysql.persistence.enabled }}
       volumes:
         - name: data
