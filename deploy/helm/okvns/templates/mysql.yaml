@@ -100,7 +100,8 @@ spec:
 {{- if not .Values.mysql.persistence.enabled }}
       volumes:
         - name: data
-          emptyDir: {}
+          emptyDir:
+            sizeLimit: {{ .Values.mysql.persistence.emptyDir.sizeLimit }}
 {{- end }}
 {{- if .Values.mysql.persistence.enabled }}
   volumeClaimTemplates:
