@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request:
 
 permissions:
@@ -16,6 +18,7 @@ concurrency:
 env:
   NODE_VERSION: 22
   PNPM_VERSION: 11.9.0
+  DOCKERHUB_REPOSITORY: beshmo/okvns
 
 jobs:
   quality:
@@ -111,3 +114,56 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  docker-images:
+    name: Docker Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - asset: api
+            tag-prefix: okvns-api
+            dockerfile: apps/api/Dockerfile
+          - asset: admin-web
+            tag-prefix: okvns-admin-web
+            dockerfile: apps/admin-web/Dockerfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.DOCKERHUB_REPOSITORY }}
+          tags: |
+            type=ref,event=branch,prefix=${{ matrix.image.tag-prefix }}-
+            type=ref,event=pr,prefix=${{ matrix.image.tag-prefix }}-
+            type=semver,pattern=${{ matrix.image.tag-prefix }}-{{version}}
+            type=semver,pattern=${{ matrix.image.tag-prefix }}-{{major}}.{{minor}}
+            type=sha,prefix=${{ matrix.image.tag-prefix }}-sha-
+
+      - name: Login to Docker Hub
+        if: ${{ github.event_name == 'push' }}
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and publish image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.image.dockerfile }}
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

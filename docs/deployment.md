@@ -54,6 +54,25 @@ kind load docker-image okvns/api:latest
 kind load docker-image okvns/admin-web:latest
 ```
 
+Production images are published by CI to the public Docker Hub repository
+`beshmo/okvns` for the API and admin frontend only:
+
+| Asset     | Dockerfile                  | Example tags                                                                                                        |
+| --------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| API       | `apps/api/Dockerfile`       | `beshmo/okvns:okvns-api-main`, `beshmo/okvns:okvns-api-sha-<sha>`, `beshmo/okvns:okvns-api-1.2.3`                   |
+| Admin web | `apps/admin-web/Dockerfile` | `beshmo/okvns:okvns-admin-web-main`, `beshmo/okvns:okvns-admin-web-sha-<sha>`, `beshmo/okvns:okvns-admin-web-1.2.3` |
+
+Pull request CI builds these production images without pushing them. Pushes to
+`main` publish branch and SHA tags, and Git tags like `v1.2.3` publish
+versioned asset tags. The demo web image is not part of the production image
+publishing flow.
+
+Docker Hub publishing requires these GitHub repository secrets:
+
+- `DOCKERHUB_USERNAME`: Docker Hub user name, for example `beshmo`.
+- `DOCKERHUB_TOKEN`: Docker Hub access token. Use an access token rather than a
+  Docker Hub account password so CI credentials can be revoked independently.
+
 Apply manifests:
 
 ```bash
