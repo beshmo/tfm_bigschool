@@ -44,8 +44,8 @@ The manifests use the published Docker Hub images by default:
 
 | Workload  | Image                                |
 | --------- | ------------------------------------ |
-| API       | `beshmo/okvns:okvns-api-1.0.0`       |
-| Admin web | `beshmo/okvns:okvns-admin-web-1.0.0` |
+| API       | `beshmo/okvns:okvns-api-1.0.1`       |
+| Admin web | `beshmo/okvns:okvns-admin-web-1.0.1` |
 
 Apply manifests:
 
@@ -104,8 +104,8 @@ data; deleting the PVC does. The reference manifests set
 The Helm chart lives in `deploy/helm/okvns/` and renders the same reference
 deployment as the raw Kubernetes manifests. Default values use:
 
-- API image: `beshmo/okvns:okvns-api-1.0.0`
-- Admin web image: `beshmo/okvns:okvns-admin-web-1.0.0`
+- API image: `beshmo/okvns:okvns-api-1.0.1`
+- Admin web image: `beshmo/okvns:okvns-admin-web-1.0.1`
 - Namespace: `okvns`
 
 Render the chart locally:
