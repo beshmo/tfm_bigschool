@@ -5,8 +5,11 @@ import { ImportPage } from './pages/ImportPage';
 import { ExportPage } from './pages/ExportPage';
 import { Icon } from './components/Icon';
 import { ToastProvider } from './components/Toast';
+import { getAppVersion } from './config';
 
 export function App() {
+  const appVersion = getAppVersion();
+
   return (
     <ToastProvider>
       <header className="site-header">
@@ -43,6 +46,7 @@ export function App() {
           </span>
           OKVNS Admin
         </span>
+        <span className="footer-version">v{appVersion}</span>
       </footer>
     </ToastProvider>
   );
