@@ -1,0 +1,176 @@
+namespaces:
+  - name: apps
+    description: Application endpoints and logical service keys used to show centralized runtime configuration.
+    entries:
+      - name: admin-api-base-url
+        value: http://okvns.beshmo.es/api
+        description: Base URL used by the administration web frontend to call the OKVNS API.
+        env_dependent: true
+      - name: public-frontend-url
+        value: http://okvns.beshmo.es/
+        description: Public URL of the deployed admin frontend shown during the TFM demo.
+        env_dependent: true
+      - name: swagger-docs-url
+        value: http://okvns.beshmo.es/api/docs
+        description: Interactive OpenAPI documentation for validating the published API contract.
+        env_dependent: true
+      - name: service-name
+        value: okvns
+        description: Logical service identifier shared by API, frontend and deployment assets.
+        env_dependent: false
+
+  - name: feature-flags
+    description: Functional switches used to demonstrate boolean-like configuration values as strings.
+    entries:
+      - name: yaml-import-enabled
+        value: 'true'
+        description: Enables the YAML import workflow from the admin web.
+        env_dependent: false
+      - name: yaml-export-enabled
+        value: 'true'
+        description: Enables full and per-namespace YAML export from the admin web.
+        env_dependent: false
+      - name: show-env-dependent-badge
+        value: 'true'
+        description: Shows which entries must be reviewed after moving data between environments.
+        env_dependent: false
+      - name: allow-unauthenticated-demo
+        value: 'true'
+        description: First implementation has no authentication or authorization, as described in the TFM documentation.
+        env_dependent: false
+
+  - name: ui-texts
+    description: Configurable texts that can be changed without redeploying consuming applications.
+    entries:
+      - name: admin-title
+        value: OKVNS Administration
+        description: Main title for the administration web.
+        env_dependent: false
+      - name: demo-banner
+        value: TFM demo environment for centralized runtime configuration.
+        description: Banner text for a demo or consuming application.
+        env_dependent: false
+      - name: empty-state
+        value: Create or import a namespace to start managing key-value entries.
+        description: Text shown when there are no namespaces yet.
+        env_dependent: false
+      - name: import-warning
+        value: Imported namespaces replace entries with the same namespace name.
+        description: Operational warning for the YAML import flow.
+        env_dependent: false
+
+  - name: operations
+    description: Operational values for pagination, probes and runtime behavior.
+    entries:
+      - name: default-page-size
+        value: '10'
+        description: Default page size used by namespace and entry listings.
+        env_dependent: false
+      - name: max-page-size
+        value: '100'
+        description: Maximum accepted page size for list endpoints.
+        env_dependent: false
+      - name: health-path
+        value: /health
+        description: Liveness endpoint used by deployment probes.
+        env_dependent: false
+      - name: readiness-path
+        value: /ready
+        description: Readiness endpoint that checks storage availability.
+        env_dependent: false
+      - name: import-payload-limit
+        value: 1MiB
+        description: Maximum YAML payload size accepted by the importer.
+        env_dependent: false
+
+  - name: deployment
+    description: Environment-specific deployment settings for Docker, Kubernetes and Helm demonstrations.
+    entries:
+      - name: storage-driver
+        value: mysql
+        description: Default durable storage backend.
+        env_dependent: true
+      - name: mysql-host
+        value: okvns-mysql
+        description: MySQL host for the deployed environment.
+        env_dependent: true
+      - name: mysql-database
+        value: okvns
+        description: Database used by the API for durable namespaces and entries.
+        env_dependent: true
+      - name: kubernetes-namespace
+        value: okvns
+        description: Target Kubernetes namespace used by the deployment manifests and Helm chart.
+        env_dependent: true
+
+  - name: demo-consumer
+    description: Example values that a consuming application could read through the OKVNS wrapper.
+    entries:
+      - name: header
+        value: OKVNS demo consumer
+        description: Header read by a sample consumer application.
+        env_dependent: false
+      - name: footer-copyright
+        value: Copyright 2026 OKVNS TFM demo.
+        description: Footer text read dynamically from OKVNS.
+        env_dependent: false
+      - name: support-endpoint
+        value: http://okvns.beshmo.es/api/docs
+        description: Link exposed by a consumer to guide operators to API documentation.
+        env_dependent: true
+      - name: fallback-message
+        value: Configuration value not found; using application default.
+        description: Message that helps demonstrate wrapper default-value behavior.
+        env_dependent: false
+
+  - name: pagination-demo
+    description: Namespace with more than ten entries to demonstrate paginated entry lists in the admin web and API.
+    entries:
+      - name: config-01
+        value: Pagination demo value 01
+        description: First entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-02
+        value: Pagination demo value 02
+        description: Second entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-03
+        value: Pagination demo value 03
+        description: Third entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-04
+        value: Pagination demo value 04
+        description: Fourth entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-05
+        value: Pagination demo value 05
+        description: Fifth entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-06
+        value: Pagination demo value 06
+        description: Sixth entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-07
+        value: Pagination demo value 07
+        description: Seventh entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-08
+        value: Pagination demo value 08
+        description: Eighth entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-09
+        value: Pagination demo value 09
+        description: Ninth entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-10
+        value: Pagination demo value 10
+        description: Tenth entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-11
+        value: Pagination demo value 11
+        description: Eleventh entry in the pagination demo namespace.
+        env_dependent: false
+      - name: config-12
+        value: Pagination demo value 12
+        description: Twelfth entry in the pagination demo namespace.
+        env_dependent: true
