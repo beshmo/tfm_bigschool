@@ -105,7 +105,7 @@ adminWeb:
     pullPolicy: IfNotPresent
   configName: okvns-web-config
   config:
-    OKVNS_API_BASE_URL: http://localhost:3000
+    OKVNS_API_BASE_URL: http://okvns.example.com/api
   service:
     port: 80
   containerPort: 8080

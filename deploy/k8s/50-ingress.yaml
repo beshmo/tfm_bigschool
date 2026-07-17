@@ -15,13 +15,6 @@ spec:
     - host: okvns.example.com
       http:
         paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: okvns-api
-                port:
-                  number: 3000
           - path: /
             pathType: Prefix
             backend:
@@ -29,3 +22,28 @@ spec:
                 name: okvns-admin-web
                 port:
                   number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: okvns-api
+  namespace: okvns
+  labels:
+    app.kubernetes.io/part-of: okvns
+  annotations:
+    # kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/use-regex: 'true'
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    okvns.dev/placeholder: 'true'
+spec:
+  rules:
+    - host: okvns.example.com
+      http:
+        paths:
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: okvns-api
+                port:
+                  number: 3000
