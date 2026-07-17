@@ -1,8 +1,12 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
+import adminWebPackage from './package.json';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __OKVNS_ADMIN_VERSION__: JSON.stringify(adminWebPackage.version),
+  },
   server: { port: 5173 },
   preview: { port: 4173 },
   test: {

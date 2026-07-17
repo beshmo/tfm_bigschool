@@ -759,6 +759,10 @@ a.name-link:hover {
   width: 16px;
   height: 16px;
 }
+.site-footer .footer-version {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
 
 /* — toast — */
 .toast-region {
