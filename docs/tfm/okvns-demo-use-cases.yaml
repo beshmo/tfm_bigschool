@@ -104,23 +104,63 @@ namespaces:
         env_dependent: true
 
   - name: demo-consumer
-    description: Example values that a consuming application could read through the OKVNS wrapper.
+    description: Content and configuration the demo-web consumer reads live from OKVNS to render its page without redeploying.
     entries:
       - name: header
-        value: OKVNS demo consumer
-        description: Header read by a sample consumer application.
+        value: OKVNS live configuration demo
+        description: Main page title rendered by the sample consumer application.
         env_dependent: false
+      - name: tagline
+        value: Every word on this page is served from centralized key-value configuration.
+        description: Eyebrow subtitle shown above the header.
+        env_dependent: false
+      - name: use-case-mode
+        value: '1'
+        description: Numeric value that selects which body use case the consumer renders; change it in OKVNS to switch layout with no redeploy.
+        env_dependent: false
+      - name: body-headline
+        value: Change this page without a deployment
+        description: Headline of the main content section.
+        env_dependent: false
+      - name: body-content
+        value: The title, this paragraph, the banner and the footer are all read at runtime from OKVNS. Edit their entries in the admin web and the page updates on the next load with no build and no release.
+        description: Primary body paragraph read live from OKVNS.
+        env_dependent: false
+      - name: banner-enabled
+        value: 'true'
+        description: Feature flag that shows or hides the announcement banner in the consumer page.
+        env_dependent: false
+      - name: banner-message
+        value: Live demo — try editing any demo-consumer entry in the admin web, then reload this page.
+        description: Announcement banner text read from OKVNS.
+        env_dependent: false
+      - name: warning-enabled
+        value: 'true'
+        description: Feature flag that shows or hides the warning panel below the header; the consumer keeps it hidden by default.
+        env_dependent: false
+      - name: warning-title
+        value: Demo environment — no authentication
+        description: Title of the warning panel rendered below the header.
+        env_dependent: false
+      - name: warning-description
+        value: This first implementation has no authentication or authorization, so do not store real or sensitive values in it.
+        description: Body text of the warning panel read live from OKVNS.
+        env_dependent: false
+      - name: cta-label
+        value: Open the API documentation
+        description: Label for the call-to-action button rendered by the consumer.
+        env_dependent: false
+      - name: support-endpoint
+        value: http://okvns.beshmo.es/api/docs
+        description: Target of the call-to-action button and support link exposed by the consumer.
+        env_dependent: true
       - name: footer-copyright
         value: Copyright 2026 OKVNS TFM demo.
         description: Footer text read dynamically from OKVNS.
         env_dependent: false
-      - name: support-endpoint
-        value: http://okvns.beshmo.es/api/docs
-        description: Link exposed by a consumer to guide operators to API documentation.
-        env_dependent: true
       - name: fallback-message
         value: Configuration value not found; using application default.
-        description: Message that helps demonstrate wrapper default-value behavior.
+        description: Message that demonstrates wrapper default-value behavior when an entry is missing.
         env_dependent: false
 
   - name: pagination-demo
