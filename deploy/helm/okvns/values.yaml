@@ -61,7 +61,7 @@ api:
   replicas: 1
   image:
     repository: beshmo/okvns
-    tag: okvns-api-1.0.0
+    tag: okvns-api-1.0.1
     pullPolicy: IfNotPresent
   command:
     migrate:
@@ -101,11 +101,11 @@ adminWeb:
   replicas: 1
   image:
     repository: beshmo/okvns
-    tag: okvns-admin-web-1.0.0
+    tag: okvns-admin-web-1.0.1
     pullPolicy: IfNotPresent
   configName: okvns-web-config
   config:
-    OKVNS_API_BASE_URL: http://okvns.example.com/api
+    OKVNS_API_BASE_URL: http://okvns.beshmo.es/api
   service:
     port: 80
   containerPort: 8080
@@ -130,9 +130,9 @@ adminWeb:
 ingress:
   enabled: true
   name: okvns
-  className: ""
+  className: nginx
   annotations:
     okvns.dev/placeholder: "true"
-  host: okvns.example.com
+  host: okvns.beshmo.es
   apiPath: /api
   webPath: /

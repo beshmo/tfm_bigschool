@@ -7,5 +7,5 @@ metadata:
     app.kubernetes.io/name: okvns-admin-web
     app.kubernetes.io/part-of: okvns
 data:
-  # Reachable from the user's browser; update to the ingress host in real setups.
-  OKVNS_API_BASE_URL: 'http://okvns.example.com/api'
+  # localhost reachable from the user's browser; update to the ingress host in real setups.
+  OKVNS_API_BASE_URL: 'http://okvns.beshmo.es/api'
