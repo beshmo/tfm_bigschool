@@ -61,7 +61,7 @@ api:
   replicas: 1
   image:
     repository: beshmo/okvns
-    tag: okvns-api-1.0.0
+    tag: okvns-api-1.0.1
     pullPolicy: IfNotPresent
   command:
     migrate:
@@ -101,7 +101,7 @@ adminWeb:
   replicas: 1
   image:
     repository: beshmo/okvns
-    tag: okvns-admin-web-1.0.0
+    tag: okvns-admin-web-1.0.1
     pullPolicy: IfNotPresent
   configName: okvns-web-config
   config:

@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: admin-web
-          image: beshmo/okvns:okvns-admin-web-1.0.0
+          image: beshmo/okvns:okvns-admin-web-1.0.1
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
