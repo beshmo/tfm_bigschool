@@ -8,4 +8,4 @@ metadata:
     app.kubernetes.io/part-of: okvns
 data:
   # Reachable from the user's browser; update to the ingress host in real setups.
-  OKVNS_API_BASE_URL: 'http://localhost:3000'
+  OKVNS_API_BASE_URL: 'http://okvns.example.com/api'
