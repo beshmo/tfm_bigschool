@@ -105,6 +105,13 @@ URLs locales con Docker Compose:
 | Administracion web | `http://localhost:8081`           |
 | MySQL              | `localhost:3306`                  |
 
+URLs del despliegue publicado:
+
+| Servicio             | URL                               |
+| -------------------- | --------------------------------- |
+| Administracion web   | `http://okvns.beshmo.es/`         |
+| Documentacion de API | `http://okvns.beshmo.es/api/docs` |
+
 Los datos se guardan en el volumen Docker `okvns-mysql-data`, por lo que sobreviven a reinicios de la API o del frontend. Para detener los contenedores sin borrar datos:
 
 ```bash
@@ -253,17 +260,18 @@ La estructura principal del repositorio es la siguiente:
 
 ### 4.3. Documentacion, despliegue y pruebas
 
-| Ruta                            | Responsabilidad                                                               |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| `docs/api-and-yaml.md`          | Referencia de endpoints REST, formato de errores, paginacion y contrato YAML. |
-| `docs/architecture.md`          | Arquitectura, capas, reglas de dependencia y configuracion.                   |
-| `docs/deployment.md`            | Ejecucion con Docker Compose, Kubernetes, Helm, imagenes y migraciones.       |
-| `docs/engineering-practices.md` | Practicas de implementacion, testing y calidad.                               |
-| `docs/adr`                      | Registro de decisiones de arquitectura.                                       |
-| `deploy/k8s`                    | Manifiestos Kubernetes de referencia.                                         |
-| `deploy/helm/okvns`             | Chart Helm del despliegue.                                                    |
-| `e2e`                           | Pruebas end-to-end con Playwright.                                            |
-| `openspec`                      | Especificaciones funcionales y cambios historicos.                            |
+| Ruta                                   | Responsabilidad                                                               |
+| -------------------------------------- | ----------------------------------------------------------------------------- |
+| `docs/api-and-yaml.md`                 | Referencia de endpoints REST, formato de errores, paginacion y contrato YAML. |
+| `docs/architecture.md`                 | Arquitectura, capas, reglas de dependencia y configuracion.                   |
+| `docs/deployment.md`                   | Ejecucion con Docker Compose, Kubernetes, Helm, imagenes y migraciones.       |
+| `docs/engineering-practices.md`        | Practicas de implementacion, testing y calidad.                               |
+| `docs/tfm/okvns-tfm-presentacion.pptx` | Presentacion del TFM preparada para la defensa del proyecto.                  |
+| `docs/adr`                             | Registro de decisiones de arquitectura.                                       |
+| `deploy/k8s`                           | Manifiestos Kubernetes de referencia.                                         |
+| `deploy/helm/okvns`                    | Chart Helm del despliegue.                                                    |
+| `e2e`                                  | Pruebas end-to-end con Playwright.                                            |
+| `openspec`                             | Especificaciones funcionales y cambios historicos.                            |
 
 ### 4.4. Esquema de componentes
 
