@@ -1,6 +1,6 @@
 {
   "name": "okvns",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "private": true,
   "description": "OKVNS: runtime key-value settings that let services and apps change behavior without redeploys.",
   "license": "SEE LICENSE IN LICENSE",
