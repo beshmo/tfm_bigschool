@@ -10,6 +10,8 @@ La unidad principal de organizacion es el **namespace**. Cada namespace contiene
 
 El sistema esta pensado para escenarios donde distintas aplicaciones necesitan leer o mantener configuraciones compartidas como endpoints, claves logicas, banderas funcionales, textos configurables o valores operativos. En la primera version no se incluye autenticacion ni autorizacion; el foco esta en la arquitectura, el contrato funcional, la persistencia, la administracion visual y la preparacion para despliegues reproducibles.
 
+URL del vídeo de presentacion del TFM: [https://www.youtube.com/watch?v=1Eub11l75rg](https://www.youtube.com/watch?v=1Eub11l75rg)
+
 ## 2. Stack tecnologico utilizado
 
 El repositorio esta organizado como un monorepo TypeScript con pnpm. La solucion separa claramente las capas de dominio, aplicacion, infraestructura y presentacion para mantener bajo acoplamiento entre las reglas de negocio y los detalles tecnicos.
@@ -266,7 +268,7 @@ La estructura principal del repositorio es la siguiente:
 | `docs/architecture.md`                 | Arquitectura, capas, reglas de dependencia y configuracion.                   |
 | `docs/deployment.md`                   | Ejecucion con Docker Compose, Kubernetes, Helm, imagenes y migraciones.       |
 | `docs/engineering-practices.md`        | Practicas de implementacion, testing y calidad.                               |
-| `docs/tfm/okvns-tfm-presentacion.pptx` | Presentacion del TFM preparada para la defensa del proyecto.                  |
+| `docs/tfm/okvns-tfm-presentacion.pdf`  | Presentacion del TFM preparada para la defensa del proyecto.                  |
 | `docs/adr`                             | Registro de decisiones de arquitectura.                                       |
 | `deploy/k8s`                           | Manifiestos Kubernetes de referencia.                                         |
 | `deploy/helm/okvns`                    | Chart Helm del despliegue.                                                    |
