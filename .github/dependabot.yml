@@ -20,6 +20,10 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+    ignore:
+      - dependency-name: '@nestjs/*'
+        update-types:
+          - 'version-update:semver-major'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
