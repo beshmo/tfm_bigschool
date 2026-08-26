@@ -20,6 +20,13 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+    ignore:
+      # NestJS packages must be upgraded together across major versions
+      # (see apps/api/package.json). A single-package major bump (e.g.
+      # @nestjs/core alone) breaks apps/api at runtime/test time.
+      - dependency-name: '@nestjs/*'
+        update-types:
+          - 'version-update:semver-major'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
