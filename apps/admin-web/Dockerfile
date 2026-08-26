@@ -1,5 +1,5 @@
 # Build context is the repository root: docker build -f apps/admin-web/Dockerfile .
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 COPY . .
@@ -7,7 +7,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @okvns/shared run build \
   && pnpm --filter @okvns/admin-web run build
 
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.31-alpine AS runtime
 ENV OKVNS_API_BASE_URL=http://localhost:3000
 COPY apps/admin-web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/apps/admin-web/dist /usr/share/nginx/html
