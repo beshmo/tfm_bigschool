@@ -9,3 +9,5 @@ allowBuilds:
   '@scarf/scarf': false
   '@swc/core': true
   esbuild: true
+overrides:
+  vite: ^6.4.3
