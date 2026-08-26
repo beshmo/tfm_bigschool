@@ -1,7 +1,18 @@
-import type { EntryDto, NamespaceDto } from '@okvns/shared';
-import { DESCRIPTION_MAX_LENGTH, compareNames } from '@okvns/shared';
+import type {
+  EntryDto,
+  NamespaceDto,
+  NamespaceListItemDto,
+  PaginatedResultDto,
+} from '@okvns/shared';
+import { DEFAULT_PAGE_SIZE, DESCRIPTION_MAX_LENGTH, compareNames, totalPages } from '@okvns/shared';
 import { ApiError } from '../api/api-error';
-import type { EntryChangesInput, NamespaceChangesInput, OkvnsApi } from '../api/okvns-api';
+import type {
+  EntryChangesInput,
+  EntryListQueryInput,
+  NamespaceChangesInput,
+  NamespaceListQueryInput,
+  OkvnsApi,
+} from '../api/okvns-api';
 
 interface FakeEntry {
   value: string;
@@ -41,6 +52,54 @@ function normalize(description: string | undefined): string | undefined {
 }
 
 const DEFAULT_TS = '2024-01-01T00:00:00.000Z';
+
+/** Item fields the fake can order by, mirroring the API's allowlists. */
+interface SortableItem {
+  name: string;
+  created_at: string;
+  modified_at: string;
+  env_dependent?: boolean;
+}
+
+/** Mirrors the API's case-insensitive "contains" name filter. */
+function matchesName(name: string, filter: string | undefined): boolean {
+  return filter === undefined || name.toLowerCase().includes(filter.toLowerCase());
+}
+
+/**
+ * Mirrors the API's ordering: by the requested field, with ties broken on
+ * ascending name in either direction so pages stay stable.
+ */
+function byField<T extends SortableItem>(sort: string, direction: string): (a: T, b: T) => number {
+  return (a, b) => {
+    const primary =
+      sort === 'env_dependent'
+        ? Number(a.env_dependent) - Number(b.env_dependent)
+        : compareNames(
+            String(a[sort as keyof SortableItem]),
+            String(b[sort as keyof SortableItem]),
+          );
+    const signed = direction === 'desc' ? -primary : primary;
+    return signed !== 0 ? signed : compareNames(a.name, b.name);
+  };
+}
+
+/** Mirrors the API's offset paging and its page metadata. */
+function paginate<T>(
+  items: T[],
+  query: { page?: number; page_size?: number },
+): PaginatedResultDto<T> {
+  const page = query.page ?? 1;
+  const pageSize = query.page_size ?? DEFAULT_PAGE_SIZE;
+  const offset = (page - 1) * pageSize;
+  return {
+    items: items.slice(offset, offset + pageSize),
+    page,
+    page_size: pageSize,
+    total_items: items.length,
+    total_pages: totalPages(items.length, pageSize as 10 | 50 | 100),
+  };
+}
 
 /**
  * In-memory OkvnsApi used by component tests. Mirrors the server's behavior
@@ -98,7 +157,23 @@ export class FakeOkvnsApi implements OkvnsApi {
     };
   }
 
-  async listNamespaces(): Promise<NamespaceDto[]> {
+  async listNamespaces(
+    query: NamespaceListQueryInput = {},
+  ): Promise<PaginatedResultDto<NamespaceListItemDto>> {
+    const items = [...this.namespaces.entries()]
+      .filter(([name]) => matchesName(name, query.name))
+      .map(([name, namespace]) => ({
+        name,
+        ...(namespace.description === undefined ? {} : { description: namespace.description }),
+        created_at: namespace.created_at,
+        modified_at: namespace.modified_at,
+      }))
+      .sort(byField(query.sort ?? 'name', query.direction ?? 'asc'));
+    return paginate(items, query);
+  }
+
+  /** Every stored namespace, as the YAML endpoints return them. */
+  private allNamespaceDtos(): NamespaceDto[] {
     return [...this.namespaces.keys()].sort(compareNames).map((name) => this.toDto(name));
   }
 
@@ -152,9 +227,19 @@ export class FakeOkvnsApi implements OkvnsApi {
     this.namespaces.delete(name);
   }
 
-  async listEntries(namespace: string): Promise<EntryDto[]> {
+  async listEntries(
+    namespace: string,
+    query: EntryListQueryInput = {},
+  ): Promise<PaginatedResultDto<EntryDto>> {
     this.assertNamespace(namespace);
-    return this.toDto(namespace).entries;
+    const items = this.toDto(namespace)
+      .entries.filter(
+        (entry) =>
+          matchesName(entry.name, query.name) &&
+          (query.env_dependent === undefined || entry.env_dependent === query.env_dependent),
+      )
+      .sort(byField(query.sort ?? 'name', query.direction ?? 'asc'));
+    return paginate(items, query);
   }
 
   async createEntry(
@@ -219,7 +304,7 @@ export class FakeOkvnsApi implements OkvnsApi {
     if (!yaml.includes('namespace')) {
       throw new ApiError('INVALID_YAML', 'YAML content is not valid.', [], 400);
     }
-    return this.listNamespaces();
+    return this.allNamespaceDtos();
   }
 
   async importYamlFile(file: File): Promise<NamespaceDto[]> {

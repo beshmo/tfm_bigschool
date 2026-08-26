@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -14,15 +14,16 @@ import {
   ListEntriesUseCase,
   UpdateEntryUseCase,
 } from '@okvns/application';
-import type { EntryDto } from '@okvns/shared';
+import type { EntryDto, PaginatedResultDto } from '@okvns/shared';
 import { NameParamPipe } from '../common/name-param.pipe';
 import {
   ApiBadRequestError,
   ApiConflictError,
   ApiNotFoundError,
 } from '../common/api-error.decorators';
+import { EntryListQueryDto } from '../common/list-query.dto';
 import { CreateEntryDto, UpdateEntryDto } from './entry.dto';
-import { EntryResponse } from './entry.schema';
+import { EntryResponse, PaginatedEntryListResponse } from './entry.schema';
 
 @ApiTags('entries')
 @ApiParam({ name: 'namespace', description: 'Namespace name.', example: 'users' })
@@ -37,12 +38,18 @@ export class EntriesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'List entries in a namespace, ordered by name.' })
-  @ApiOkResponse({ type: [EntryResponse] })
+  @ApiOperation({
+    summary: 'List entries in a namespace as a page, ordered and filtered by the given query.',
+    description: 'Returns a paginated result rather than an array.',
+  })
+  @ApiOkResponse({ type: PaginatedEntryListResponse })
   @ApiBadRequestError()
   @ApiNotFoundError('Namespace not found.')
-  list(@Param('namespace', NameParamPipe) namespace: string): Promise<EntryDto[]> {
-    return this.listEntries.execute(namespace);
+  list(
+    @Param('namespace', NameParamPipe) namespace: string,
+    @Query() query: EntryListQueryDto,
+  ): Promise<PaginatedResultDto<EntryDto>> {
+    return this.listEntries.execute(namespace, query);
   }
 
   @Post()

@@ -21,6 +21,7 @@ test-results/
 .env.*
 !.env.example
 !.env.e2e
+.digitalocean
 
 # Editor / OS
 .DS_Store

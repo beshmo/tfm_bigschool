@@ -20,12 +20,12 @@ and migration notes described below.
 | ------ | ---------------------------------- | ---------------------------------------------------------------------------------------- |
 | GET    | `/health`                          | Liveness probe.                                                                          |
 | GET    | `/ready`                           | Readiness probe.                                                                         |
-| GET    | `/namespaces`                      | List namespaces.                                                                         |
+| GET    | `/namespaces`                      | List namespaces as a page (see [List Pagination](#list-pagination)).                     |
 | POST   | `/namespaces`                      | Create a namespace (`{ "name": "...", "description"? }`).                                |
 | GET    | `/namespaces/:name`                | Get a namespace with its entries.                                                        |
 | PUT    | `/namespaces/:name`                | Update a namespace (`{ "name"?, "description"? }`).                                      |
 | DELETE | `/namespaces/:name`                | Delete a namespace.                                                                      |
-| GET    | `/namespaces/:name/entries`        | List entries in a namespace.                                                             |
+| GET    | `/namespaces/:name/entries`        | List entries in a namespace as a page (see [List Pagination](#list-pagination)).         |
 | POST   | `/namespaces/:name/entries`        | Create an entry (`{ "name": "...", "value": "...", "description"?, "env_dependent"? }`). |
 | GET    | `/namespaces/:name/entries/:entry` | Get an entry.                                                                            |
 | PUT    | `/namespaces/:name/entries/:entry` | Update an entry (`{ "name"?, "value"?, "description"?, "env_dependent"? }`).             |
@@ -33,6 +33,68 @@ and migration notes described below.
 | POST   | `/yaml/import`                     | Import YAML (`{ "yaml": "..." }` JSON, or multipart file field `file`).                  |
 | GET    | `/yaml/export`                     | Export all namespaces as YAML (`{ "yaml": "..." }`).                                     |
 | GET    | `/yaml/export/:name`               | Export a single namespace as YAML (`{ "yaml": "..." }`).                                 |
+
+## List Pagination
+
+The two list endpoints — `GET /namespaces` and `GET /namespaces/:name/entries` —
+return one page of results plus metadata describing the full result set:
+
+```json
+{
+  "items": [],
+  "page": 1,
+  "page_size": 10,
+  "total_items": 42,
+  "total_pages": 5
+}
+```
+
+- `page` is 1-based. `total_items` counts every item matching the query across
+  all pages, ignoring pagination; `total_pages` is `0` when nothing matched, so
+  an empty result set is distinguishable from a single empty page.
+- Requesting a page past the end returns an empty `items` with the true totals,
+  not an error.
+
+### Query parameters
+
+| Parameter       | Applies to | Values                                               | Default |
+| --------------- | ---------- | ---------------------------------------------------- | ------- |
+| `page`          | both       | Any integer ≥ 1                                      | `1`     |
+| `page_size`     | both       | `10`, `50`, or `100`                                 | `10`    |
+| `sort`          | namespaces | `name`, `created_at`, `modified_at`                  | `name`  |
+| `sort`          | entries    | `name`, `created_at`, `modified_at`, `env_dependent` | `name`  |
+| `direction`     | both       | `asc`, `desc`                                        | `asc`   |
+| `name`          | both       | Case-insensitive "contains" filter on the name       | none    |
+| `env_dependent` | entries    | `true` or `false`; omit to return all entries        | none    |
+
+Page sizes, sort fields, and directions are **allowlisted**: any other value is
+rejected with a `VALIDATION_ERROR` before the list query runs. `page_size=25` and
+`sort=value` are errors, not silently-clamped or ignored inputs.
+
+Ordering is deterministic. When rows tie on the primary sort field — two
+namespaces created in the same second, or entries sharing an `env_dependent`
+value — the tie breaks on ascending name, so a page boundary never splits rows
+that compare equal.
+
+Filtering by `name` matches a substring case-insensitively, and the filter text
+is matched literally: a `%` or `_` in the filter is not a wildcard.
+
+### Migrating from array list responses
+
+**Breaking change.** Both list endpoints previously returned a bare JSON array.
+They now return the object above, and namespace list items no longer carry
+`entries`.
+
+- Read `response.items` where you previously used the array directly.
+- Namespace list items carry `name`, optional `description`, `created_at`, and
+  `modified_at` — but not `entries`. A page of namespaces would otherwise include
+  every entry of every namespace on it, which defeats paging. Fetch entries from
+  `GET /namespaces/:name/entries`, or the whole aggregate from
+  `GET /namespaces/:name`, which still returns its `entries`.
+- Clients that relied on receiving _every_ namespace or entry in one response now
+  get only the first page. Either request `page_size=100`, or page until
+  `page` reaches `total_pages`. YAML export (`GET /yaml/export`) is unpaginated
+  and still returns the whole dataset.
 
 ## Names
 

@@ -76,6 +76,14 @@ Import validates the **entire** document before mutating anything (atomic) and *
 - API tests use Vitest + `unplugin-swc` (for decorators) + supertest, not Jest; build the shared app config via `applyGlobals` so tests and `main.ts` behave identically.
 - Deterministic ordering everywhere uses `compareNames` (locale-independent), not `localeCompare`.
 
+## Admin frontend design system
+
+`apps/admin-web/src/styles.css` vendors the **Industry** design system (the `Industry` Claude design project) — a steel-blue wireframe look. Its token sheet is the source of truth: take every color, font, spacing, radius and shadow from a `var(--color-*)` / `--font-*` / `--space-*` / `--radius-*` / `--shadow-*` variable, and never hard-code a hex, font name, or raw px the tokens already carry. Build with the system's classes (`.btn`, `.input`, `.field`, `.card`, `.table`, `.tag`, `.dialog`, `.nav`) rather than inventing parallel ones.
+
+Cards, panels, figures and the primary button are _blueprint objects_: square-cornered, hairline-bordered, and wearing four `+` registration marks — the `.blueprint` class plus a `<Corners />` child. Never drop the marks from a framed element, and never round or surface-fill a card. Icons are Lucide at stroke-width 1.5, inlined in `components/Icon.tsx`.
+
+Dates render through `components/Timestamps.tsx`, which pins `Intl` to `en-US`/UTC so output stays identical on every machine (tests and E2E depend on this) while `<time dateTime>` keeps the API's exact ISO instant.
+
 ## OpenSpec
 
 Change specs live in `openspec/`. This project uses the `spec-driven` schema; drive implementation via `/opsx:apply` (or the tasks in `openspec/changes/<name>/tasks.md`). `AGENTS.md` holds the confirmed stack decisions and MVP constraints.

@@ -16,3 +16,7 @@ export function getApiBaseUrl(): string {
   }
   return import.meta.env.VITE_OKVNS_API_BASE_URL ?? 'http://localhost:3000';
 }
+
+export function getAppVersion(): string {
+  return __OKVNS_ADMIN_VERSION__;
+}

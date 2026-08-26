@@ -1,6 +1,7 @@
 # Build context is the repository root: docker build -f apps/api/Dockerfile .
-FROM node:22-alpine AS build
-RUN corepack enable
+FROM node:26-alpine AS build
+# Node 26 no longer bundles Corepack; install it explicitly before enabling it.
+RUN npm install -g corepack@latest && corepack enable
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile
@@ -12,7 +13,7 @@ RUN pnpm --filter @okvns/shared run build \
 # Produce a self-contained deployment with only production dependencies.
 RUN pnpm --filter @okvns/api deploy --prod /app
 
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 ENV NODE_ENV=production
 ENV OKVNS_API_PORT=3000
 WORKDIR /app

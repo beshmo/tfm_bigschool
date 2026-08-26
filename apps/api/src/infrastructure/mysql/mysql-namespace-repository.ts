@@ -1,5 +1,12 @@
-import type { NamespaceRepository } from '@okvns/application';
+import type { NamespaceRepository, NamespaceSummary, PageResult } from '@okvns/application';
 import { DuplicateNamespaceError, Entry, Namespace, NamespaceNotFoundError } from '@okvns/domain';
+import type {
+  EntryListQuery,
+  EntrySortField,
+  NamespaceListQuery,
+  NamespaceSortField,
+  SortDirection,
+} from '@okvns/shared';
 import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 interface NamespaceRow extends RowDataPacket {
@@ -31,6 +38,56 @@ interface TimestampRow extends RowDataPacket {
   entry_name?: string;
   created_at: Date | string;
   updated_at: Date | string;
+}
+
+interface CountRow extends RowDataPacket {
+  total: number;
+}
+
+/**
+ * Sort fields map to fixed column fragments here rather than being interpolated
+ * from the request. The application layer only ever passes an allowlisted field,
+ * and this table is the second half of that guarantee: an unknown field cannot
+ * reach the SQL text.
+ */
+const NAMESPACE_SORT_COLUMNS: Record<NamespaceSortField, string> = {
+  name: 'name',
+  created_at: 'created_at',
+  modified_at: 'updated_at',
+};
+
+const ENTRY_SORT_COLUMNS: Record<EntrySortField, string> = {
+  name: 'entry_name',
+  created_at: 'created_at',
+  modified_at: 'updated_at',
+  env_dependent: 'env_dependent',
+};
+
+function sqlDirection(direction: SortDirection): 'ASC' | 'DESC' {
+  return direction === 'desc' ? 'DESC' : 'ASC';
+}
+
+/**
+ * Builds the `ORDER BY` for a list query. Ties on the primary field always break
+ * on ascending name so a page boundary cannot split rows that compare equal —
+ * the same rule the in-memory adapter applies.
+ */
+function orderBy(column: string, nameColumn: string, direction: SortDirection): string {
+  const primary = `${column} ${sqlDirection(direction)}`;
+  return column === nameColumn ? primary : `${primary}, ${nameColumn} ASC`;
+}
+
+/**
+ * Builds a case-insensitive "contains" LIKE pattern.
+ *
+ * Both sides are lowercased in SQL rather than relying on the column's collation
+ * being case-insensitive, so filtering behaves identically to the in-memory
+ * adapter no matter how the schema is collated. The filter's own `%`, `_`, and
+ * `\` are escaped so a user's literal text cannot act as a wildcard.
+ */
+function containsPattern(filter: string): string {
+  const escaped = filter.toLowerCase().replace(/[\\%_]/g, (char) => `\\${char}`);
+  return `%${escaped}%`;
 }
 
 /** MySQL error code raised when a unique constraint is violated. */
@@ -104,6 +161,71 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
     return namespaceRows.map((row) =>
       this.toNamespace(row, entriesByNamespaceId.get(row.id) ?? []),
     );
+  }
+
+  async listPage(query: NamespaceListQuery): Promise<PageResult<NamespaceSummary>> {
+    const where = query.name === undefined ? '' : " WHERE LOWER(name) LIKE ? ESCAPE '\\\\'";
+    const filterParams = query.name === undefined ? [] : [containsPattern(query.name)];
+
+    const [countRows] = await this.pool.query<CountRow[]>(
+      `SELECT COUNT(*) AS total FROM namespaces${where}`,
+      filterParams,
+    );
+    const totalItems = Number(countRows[0].total);
+
+    const order = orderBy(NAMESPACE_SORT_COLUMNS[query.sort], 'name', query.direction);
+    const [rows] = await this.pool.query<NamespaceRow[]>(
+      `SELECT name, description, created_at, updated_at AS modified_at FROM namespaces${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
+      [...filterParams, query.page_size, (query.page - 1) * query.page_size],
+    );
+    return {
+      items: rows.map((row) => ({
+        name: row.name,
+        description: fromColumn(row.description),
+        createdAt: toIso(row.created_at),
+        modifiedAt: toIso(row.modified_at),
+      })),
+      totalItems,
+    };
+  }
+
+  async listEntriesPage(
+    namespaceName: string,
+    query: EntryListQuery,
+  ): Promise<PageResult<Entry> | null> {
+    const [namespaceRows] = await this.pool.query<NamespaceRow[]>(
+      'SELECT id FROM namespaces WHERE name = ?',
+      [namespaceName],
+    );
+    if (namespaceRows.length === 0) {
+      return null;
+    }
+    const namespaceId = namespaceRows[0].id;
+
+    const conditions = ['namespace_id = ?'];
+    const filterParams: unknown[] = [namespaceId];
+    if (query.name !== undefined) {
+      conditions.push("LOWER(entry_name) LIKE ? ESCAPE '\\\\'");
+      filterParams.push(containsPattern(query.name));
+    }
+    if (query.env_dependent !== undefined) {
+      conditions.push('env_dependent = ?');
+      filterParams.push(query.env_dependent);
+    }
+    const where = ` WHERE ${conditions.join(' AND ')}`;
+
+    const [countRows] = await this.pool.query<CountRow[]>(
+      `SELECT COUNT(*) AS total FROM entries${where}`,
+      filterParams,
+    );
+    const totalItems = Number(countRows[0].total);
+
+    const order = orderBy(ENTRY_SORT_COLUMNS[query.sort], 'entry_name', query.direction);
+    const [rows] = await this.pool.query<EntryRow[]>(
+      `SELECT namespace_id, entry_name, value, description, env_dependent, created_at, updated_at AS modified_at FROM entries${where} ORDER BY ${order} LIMIT ? OFFSET ?`,
+      [...filterParams, query.page_size, (query.page - 1) * query.page_size],
+    );
+    return { items: rows.map((row) => this.toEntry(row)), totalItems };
   }
 
   async findByName(name: string): Promise<Namespace | null> {
@@ -335,18 +457,21 @@ export class MysqlNamespaceRepository implements NamespaceRepository {
     }
   }
 
+  /** Reconstructs a domain entry from a stored row, preserving timestamps. */
+  private toEntry(row: EntryRow): Entry {
+    return Entry.rehydrate(
+      row.entry_name,
+      row.value,
+      toIso(row.created_at),
+      toIso(row.modified_at),
+      fromColumn(row.description),
+      fromBoolColumn(row.env_dependent),
+    );
+  }
+
   /** Reconstructs a domain aggregate from stored rows, preserving timestamps. */
   private toNamespace(namespaceRow: NamespaceRow, entryRows: EntryRow[]): Namespace {
-    const entries = entryRows.map((row) =>
-      Entry.rehydrate(
-        row.entry_name,
-        row.value,
-        toIso(row.created_at),
-        toIso(row.modified_at),
-        fromColumn(row.description),
-        fromBoolColumn(row.env_dependent),
-      ),
-    );
+    const entries = entryRows.map((row) => this.toEntry(row));
     return Namespace.rehydrate(
       namespaceRow.name,
       toIso(namespaceRow.created_at),
