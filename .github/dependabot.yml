@@ -20,7 +20,7 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
-    # NestJS packages must be upgraded together across major versions.
+    # NestJS packages must be upgraded together; isolated major bumps break the API.
     ignore:
       - dependency-name: '@nestjs/*'
         update-types:
