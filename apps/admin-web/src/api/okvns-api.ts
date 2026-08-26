@@ -1,5 +1,19 @@
-import type { EntryDto, NamespaceDto } from '@okvns/shared';
+import type {
+  EntryDto,
+  EntryListQuery,
+  NamespaceDto,
+  NamespaceListItemDto,
+  NamespaceListQuery,
+  PaginatedResultDto,
+} from '@okvns/shared';
 import { ApiError } from './api-error';
+
+/**
+ * List query inputs. Every field is optional: the API applies its own defaults
+ * for anything omitted, so callers only send what the user actually chose.
+ */
+export type NamespaceListQueryInput = Partial<NamespaceListQuery>;
+export type EntryListQueryInput = Partial<EntryListQuery>;
 
 export interface EntryChangesInput {
   name?: string;
@@ -19,12 +33,17 @@ export interface NamespaceChangesInput {
 
 /** The admin frontend's view of the OKVNS API. Components depend on this port. */
 export interface OkvnsApi {
-  listNamespaces(): Promise<NamespaceDto[]>;
+  listNamespaces(
+    query?: NamespaceListQueryInput,
+  ): Promise<PaginatedResultDto<NamespaceListItemDto>>;
   createNamespace(name: string, description?: string): Promise<NamespaceDto>;
   getNamespace(name: string): Promise<NamespaceDto>;
   updateNamespace(name: string, changes: NamespaceChangesInput): Promise<NamespaceDto>;
   deleteNamespace(name: string): Promise<void>;
-  listEntries(namespace: string): Promise<EntryDto[]>;
+  listEntries(
+    namespace: string,
+    query?: EntryListQueryInput,
+  ): Promise<PaginatedResultDto<EntryDto>>;
   createEntry(
     namespace: string,
     name: string,
@@ -78,8 +97,10 @@ export class HttpOkvnsApi implements OkvnsApi {
     return body as T;
   }
 
-  listNamespaces(): Promise<NamespaceDto[]> {
-    return this.request('/namespaces');
+  listNamespaces(
+    query: NamespaceListQueryInput = {},
+  ): Promise<PaginatedResultDto<NamespaceListItemDto>> {
+    return this.request(`/namespaces${queryString(query)}`);
   }
 
   createNamespace(name: string, description?: string): Promise<NamespaceDto> {
@@ -106,8 +127,13 @@ export class HttpOkvnsApi implements OkvnsApi {
     return this.request(`/namespaces/${encodeURIComponent(name)}`, { method: 'DELETE' });
   }
 
-  listEntries(namespace: string): Promise<EntryDto[]> {
-    return this.request(`/namespaces/${encodeURIComponent(namespace)}/entries`);
+  listEntries(
+    namespace: string,
+    query: EntryListQueryInput = {},
+  ): Promise<PaginatedResultDto<EntryDto>> {
+    return this.request(
+      `/namespaces/${encodeURIComponent(namespace)}/entries${queryString(query)}`,
+    );
   }
 
   createEntry(
@@ -173,6 +199,22 @@ export class HttpOkvnsApi implements OkvnsApi {
     const result = await this.request<{ yaml: string }>(`/yaml/export/${encodeURIComponent(name)}`);
     return result.yaml;
   }
+}
+
+/**
+ * Serializes a list query into a URL query string, omitting unset fields so the
+ * API applies its own defaults. Returns an empty string when nothing is set, to
+ * keep a bare list request free of a trailing `?`.
+ */
+function queryString(query: NamespaceListQueryInput | EntryListQueryInput): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) {
+      params.set(key, String(value));
+    }
+  }
+  const serialized = params.toString();
+  return serialized ? `?${serialized}` : '';
 }
 
 function parseJson(raw: string): unknown {

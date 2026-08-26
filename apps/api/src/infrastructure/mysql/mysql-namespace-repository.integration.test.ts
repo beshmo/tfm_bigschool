@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Pool, PoolConnection, ResultSetHeader } from 'mysql2/promise';
 import { DuplicateNamespaceError, Entry, Namespace, NamespaceNotFoundError } from '@okvns/domain';
+import type { EntryListQuery, NamespaceListQuery } from '@okvns/shared';
 import { mysqlTestAvailable, useMysqlTestSchema } from '../../../test/mysql-test-db';
 import { MysqlNamespaceRepository } from './mysql-namespace-repository';
 
@@ -366,6 +367,185 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
     const stored = await repository.findByName('legacy');
     expect(stored?.getEntry('admin').envDependent).toBe(false);
     expect(stored?.getEntry('admin').value).toBe('secret');
+  });
+
+  /**
+   * These assert that the SQL list queries behave like the in-memory adapter's
+   * shared semantics — same filtering, same tie-breaking, same totals — since
+   * the two implementations are independent and can otherwise drift.
+   */
+  describe('list queries', () => {
+    const namespaceQuery: NamespaceListQuery = {
+      page: 1,
+      page_size: 10,
+      sort: 'name',
+      direction: 'asc',
+    };
+    const entryQuery: EntryListQuery = { page: 1, page_size: 10, sort: 'name', direction: 'asc' };
+
+    it('GIVEN namespaces WHEN a page is listed THEN it is ordered by name with totals', async () => {
+      await repository.create(namespaceWith('zeta'));
+      await repository.create(namespaceWith('alpha'));
+
+      const result = await repository.listPage(namespaceQuery);
+      expect(result.items.map((n) => n.name)).toEqual(['alpha', 'zeta']);
+      expect(result.totalItems).toBe(2);
+    });
+
+    it('GIVEN a namespace with entries WHEN listed THEN the summary carries metadata but no entries', async () => {
+      const namespace = Namespace.create('users', 'the users');
+      namespace.setEntries([Entry.create('admin', 'secret')]);
+      await repository.create(namespace);
+
+      const result = await repository.listPage(namespaceQuery);
+      expect(result.items[0]).toEqual({
+        name: 'users',
+        description: 'the users',
+        createdAt: expect.any(String),
+        modifiedAt: expect.any(String),
+      });
+    });
+
+    it('GIVEN a namespace without a description WHEN listed THEN it maps NULL back to undefined', async () => {
+      await repository.create(namespaceWith('users'));
+      const result = await repository.listPage(namespaceQuery);
+      expect(result.items[0].description).toBeUndefined();
+    });
+
+    it('GIVEN more namespaces than a page holds WHEN paged THEN pages slice while totals count all', async () => {
+      for (const name of ['a', 'b', 'c']) {
+        await repository.create(namespaceWith(name));
+      }
+      const result = await repository.listPage({ ...namespaceQuery, page: 2, page_size: 10 });
+      expect(result.items).toEqual([]);
+      expect(result.totalItems).toBe(3);
+    });
+
+    it('GIVEN namespaces WHEN listed descending THEN the order reverses', async () => {
+      await repository.create(namespaceWith('alpha'));
+      await repository.create(namespaceWith('zeta'));
+
+      const result = await repository.listPage({ ...namespaceQuery, direction: 'desc' });
+      expect(result.items.map((n) => n.name)).toEqual(['zeta', 'alpha']);
+    });
+
+    it('GIVEN namespaces sorted by a timestamp WHEN tied THEN ties break on ascending name', async () => {
+      // Created in one batch so their created_at values collide, forcing the
+      // secondary name ordering to decide.
+      await repository.create(namespaceWith('b'));
+      await repository.create(namespaceWith('a'));
+
+      const result = await repository.listPage({ ...namespaceQuery, sort: 'created_at' });
+      expect(result.items.map((n) => n.name)).toEqual(['a', 'b']);
+    });
+
+    it('GIVEN a name filter WHEN listed THEN it matches case-insensitively', async () => {
+      await repository.create(namespaceWith('Alpha'));
+      await repository.create(namespaceWith('zeta'));
+
+      const result = await repository.listPage({ ...namespaceQuery, name: 'ALPH' });
+      expect(result.items.map((n) => n.name)).toEqual(['Alpha']);
+      expect(result.totalItems).toBe(1);
+    });
+
+    it('GIVEN a filter containing a LIKE wildcard WHEN listed THEN it is matched literally', async () => {
+      await repository.create(namespaceWith('a_b'));
+      await repository.create(namespaceWith('axb'));
+
+      // Unescaped, `_` is a single-character wildcard and would match 'axb' too.
+      const result = await repository.listPage({ ...namespaceQuery, name: 'a_b' });
+      expect(result.items.map((n) => n.name)).toEqual(['a_b']);
+    });
+
+    it('GIVEN a namespace WHEN its entries are paged THEN they are ordered with totals', async () => {
+      await repository.create(
+        namespaceWith('users', [
+          ['zeta', '1'],
+          ['alpha', '2'],
+        ]),
+      );
+
+      const result = await repository.listEntriesPage('users', entryQuery);
+      expect(result?.items.map((e) => e.name)).toEqual(['alpha', 'zeta']);
+      expect(result?.totalItems).toBe(2);
+    });
+
+    it('GIVEN entries WHEN filtered by name THEN only matches are returned', async () => {
+      await repository.create(
+        namespaceWith('users', [
+          ['db-host', '1'],
+          ['db-port', '2'],
+          ['retries', '3'],
+        ]),
+      );
+
+      const result = await repository.listEntriesPage('users', { ...entryQuery, name: 'DB' });
+      expect(result?.items.map((e) => e.name)).toEqual(['db-host', 'db-port']);
+      expect(result?.totalItems).toBe(2);
+    });
+
+    it('GIVEN entries WHEN filtered by env_dependent THEN only matching entries are returned', async () => {
+      const namespace = Namespace.create('users');
+      namespace.setEntries([
+        Entry.create('db-host', 'localhost', undefined, true),
+        Entry.create('retries', '3'),
+      ]);
+      await repository.create(namespace);
+
+      const dependent = await repository.listEntriesPage('users', {
+        ...entryQuery,
+        env_dependent: true,
+      });
+      expect(dependent?.items.map((e) => e.name)).toEqual(['db-host']);
+
+      const independent = await repository.listEntriesPage('users', {
+        ...entryQuery,
+        env_dependent: false,
+      });
+      expect(independent?.items.map((e) => e.name)).toEqual(['retries']);
+    });
+
+    it('GIVEN entries WHEN sorted by env_dependent THEN independent entries come first ascending', async () => {
+      const namespace = Namespace.create('users');
+      namespace.setEntries([
+        Entry.create('a-dependent', 'v', undefined, true),
+        Entry.create('z-independent', 'v'),
+      ]);
+      await repository.create(namespace);
+
+      const result = await repository.listEntriesPage('users', {
+        ...entryQuery,
+        sort: 'env_dependent',
+      });
+      expect(result?.items.map((e) => e.name)).toEqual(['z-independent', 'a-dependent']);
+    });
+
+    it('GIVEN a listed entry WHEN read THEN it carries its stored metadata', async () => {
+      const namespace = Namespace.create('users');
+      namespace.setEntries([Entry.create('admin', 'secret', 'the admin', true)]);
+      await repository.create(namespace);
+
+      const result = await repository.listEntriesPage('users', entryQuery);
+      expect(result?.items[0]).toMatchObject({
+        name: 'admin',
+        value: 'secret',
+        description: 'the admin',
+        envDependent: true,
+      });
+    });
+
+    it('GIVEN entries in another namespace WHEN listed THEN they are excluded', async () => {
+      await repository.create(namespaceWith('users', [['admin', '1']]));
+      await repository.create(namespaceWith('other', [['stranger', '2']]));
+
+      const result = await repository.listEntriesPage('users', entryQuery);
+      expect(result?.items.map((e) => e.name)).toEqual(['admin']);
+      expect(result?.totalItems).toBe(1);
+    });
+
+    it('GIVEN a missing namespace WHEN its entries are paged THEN it reports absence as null', async () => {
+      expect(await repository.listEntriesPage('missing', entryQuery)).toBeNull();
+    });
   });
 });
 

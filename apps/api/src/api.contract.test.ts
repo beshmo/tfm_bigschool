@@ -64,8 +64,8 @@ describe('Namespace endpoints', () => {
     await http.post('/namespaces').send({ name: 'alpha' });
     const res = await http.get('/namespaces');
     expect(res.status).toBe(200);
-    expect(res.body.map((n: { name: string }) => n.name)).toEqual(['alpha', 'zeta']);
-    for (const namespace of res.body) {
+    expect(res.body.items.map((n: { name: string }) => n.name)).toEqual(['alpha', 'zeta']);
+    for (const namespace of res.body.items) {
       expect(namespace.created_at).toEqual(expect.any(String));
       expect(namespace.modified_at).toEqual(expect.any(String));
     }
@@ -149,7 +149,7 @@ describe('Namespace endpoints', () => {
   it('GET /namespaces includes descriptions when stored', async () => {
     await http.post('/namespaces').send({ name: 'users', description: 'the users' });
     const res = await http.get('/namespaces');
-    expect(res.body[0].description).toBe('the users');
+    expect(res.body.items[0].description).toBe('the users');
   });
 
   it('PUT /namespaces/:name updates the description and refreshes modified_at', async () => {
@@ -191,6 +191,240 @@ describe('Namespace endpoints', () => {
   });
 });
 
+describe('Namespace list query', () => {
+  async function seed(...names: string[]): Promise<void> {
+    for (const name of names) {
+      await http.post('/namespaces').send({ name });
+    }
+  }
+
+  it('GET /namespaces returns a paginated result rather than an array', async () => {
+    await seed('users');
+    const res = await http.get('/namespaces');
+    expect(Array.isArray(res.body)).toBe(false);
+    expect(res.body).toMatchObject({ page: 1, page_size: 10, total_items: 1, total_pages: 1 });
+    expect(res.body.items).toHaveLength(1);
+  });
+
+  it('GET /namespaces items carry no entries', async () => {
+    await seed('users');
+    await http.post('/namespaces/users/entries').send({ name: 'admin', value: 'secret' });
+    const res = await http.get('/namespaces');
+    expect(res.body.items[0]).not.toHaveProperty('entries');
+    expect(res.body.items[0]).toMatchObject({
+      name: 'users',
+      created_at: expect.any(String),
+      modified_at: expect.any(String),
+    });
+  });
+
+  it('GET /namespaces with no matches returns an empty page with no pages', async () => {
+    const res = await http.get('/namespaces');
+    expect(res.body).toEqual({
+      items: [],
+      page: 1,
+      page_size: 10,
+      total_items: 0,
+      total_pages: 0,
+    });
+  });
+
+  it('GET /namespaces honours page_size and reports totals across pages', async () => {
+    await seed('a', 'b', 'c');
+    const res = await http.get('/namespaces').query({ page_size: 10 });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ page_size: 10, total_items: 3, total_pages: 1 });
+  });
+
+  it('GET /namespaces returns a later page', async () => {
+    await seed('a', 'b');
+    const res = await http.get('/namespaces').query({ page: 2 });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ page: 2, items: [], total_items: 2 });
+  });
+
+  it.each([25, 0, -10, 1000])('GET /namespaces rejects page_size %s', async (pageSize) => {
+    const res = await http.get('/namespaces').query({ page_size: pageSize });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error).not.toHaveProperty('stack');
+  });
+
+  it('GET /namespaces rejects a non-numeric page_size', async () => {
+    const res = await http.get('/namespaces').query({ page_size: 'lots' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it.each([0, -1])('GET /namespaces rejects page %s', async (page) => {
+    const res = await http.get('/namespaces').query({ page });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('GET /namespaces rejects an unsupported sort field', async () => {
+    const res = await http.get('/namespaces').query({ sort: 'description' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('GET /namespaces rejects an entry-only sort field', async () => {
+    // env_dependent orders entries, not namespaces.
+    const res = await http.get('/namespaces').query({ sort: 'env_dependent' });
+    expect(res.status).toBe(400);
+  });
+
+  it('GET /namespaces rejects an unsupported sort direction', async () => {
+    const res = await http.get('/namespaces').query({ direction: 'sideways' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('GET /namespaces rejects an unknown query parameter', async () => {
+    const res = await http.get('/namespaces').query({ nonsense: 'x' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toContain('property nonsense should not exist');
+  });
+
+  it('GET /namespaces orders by name descending', async () => {
+    await seed('alpha', 'zeta');
+    const res = await http.get('/namespaces').query({ direction: 'desc' });
+    expect(res.body.items.map((n: { name: string }) => n.name)).toEqual(['zeta', 'alpha']);
+  });
+
+  it('GET /namespaces orders by created_at rather than by name', async () => {
+    // Seeded in reverse name order, so creation order and name order disagree.
+    await seed('zeta', 'alpha');
+    const ascending = await http.get('/namespaces').query({ sort: 'created_at', direction: 'asc' });
+    expect(ascending.body.items.map((n: { name: string }) => n.name)).toEqual(['zeta', 'alpha']);
+    const descending = await http
+      .get('/namespaces')
+      .query({ sort: 'created_at', direction: 'desc' });
+    expect(descending.body.items.map((n: { name: string }) => n.name)).toEqual(['alpha', 'zeta']);
+  });
+
+  it('GET /namespaces filters by name and reports the filtered totals', async () => {
+    await seed('users', 'user-groups', 'flags');
+    const res = await http.get('/namespaces').query({ name: 'user' });
+    expect(res.body.items.map((n: { name: string }) => n.name)).toEqual(['user-groups', 'users']);
+    expect(res.body).toMatchObject({ total_items: 2, total_pages: 1 });
+  });
+
+  it('GET /namespaces filters by name case-insensitively', async () => {
+    await seed('Users');
+    const res = await http.get('/namespaces').query({ name: 'USER' });
+    expect(res.body.items.map((n: { name: string }) => n.name)).toEqual(['Users']);
+  });
+});
+
+describe('Entry list query', () => {
+  beforeEach(async () => {
+    await http.post('/namespaces').send({ name: 'users' });
+  });
+
+  async function seedEntry(name: string, envDependent = false): Promise<void> {
+    await http
+      .post('/namespaces/users/entries')
+      .send({ name, value: 'v', env_dependent: envDependent });
+  }
+
+  it('GET entries returns a paginated result rather than an array', async () => {
+    await seedEntry('admin');
+    const res = await http.get('/namespaces/users/entries');
+    expect(Array.isArray(res.body)).toBe(false);
+    expect(res.body).toMatchObject({ page: 1, page_size: 10, total_items: 1, total_pages: 1 });
+  });
+
+  it('GET entries for a missing namespace returns a safe 404', async () => {
+    const res = await http.get('/namespaces/missing/entries');
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NAMESPACE_NOT_FOUND');
+    expect(res.body.error).not.toHaveProperty('stack');
+  });
+
+  it('GET entries validates the query before checking the namespace exists', async () => {
+    const res = await http.get('/namespaces/missing/entries').query({ page_size: 25 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it.each([25, 0, -10])('GET entries rejects page_size %s', async (pageSize) => {
+    const res = await http.get('/namespaces/users/entries').query({ page_size: pageSize });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('GET entries rejects an unsupported sort field', async () => {
+    const res = await http.get('/namespaces/users/entries').query({ sort: 'value' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('GET entries filters by name and reports the filtered totals', async () => {
+    await seedEntry('db-host');
+    await seedEntry('db-port');
+    await seedEntry('retries');
+    const res = await http.get('/namespaces/users/entries').query({ name: 'db' });
+    expect(res.body.items.map((e: { name: string }) => e.name)).toEqual(['db-host', 'db-port']);
+    expect(res.body).toMatchObject({ total_items: 2, total_pages: 1 });
+  });
+
+  it('GET entries filters by env_dependent true', async () => {
+    await seedEntry('db-host', true);
+    await seedEntry('retries');
+    const res = await http.get('/namespaces/users/entries').query({ env_dependent: 'true' });
+    expect(res.body.items.map((e: { name: string }) => e.name)).toEqual(['db-host']);
+    expect(res.body.total_items).toBe(1);
+  });
+
+  it('GET entries filters by env_dependent false', async () => {
+    await seedEntry('db-host', true);
+    await seedEntry('retries');
+    const res = await http.get('/namespaces/users/entries').query({ env_dependent: 'false' });
+    expect(res.body.items.map((e: { name: string }) => e.name)).toEqual(['retries']);
+  });
+
+  it('GET entries without an env_dependent filter returns all entries', async () => {
+    await seedEntry('db-host', true);
+    await seedEntry('retries');
+    const res = await http.get('/namespaces/users/entries');
+    expect(res.body.total_items).toBe(2);
+  });
+
+  it('GET entries rejects a non-boolean env_dependent filter', async () => {
+    const res = await http.get('/namespaces/users/entries').query({ env_dependent: 'maybe' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error).not.toHaveProperty('stack');
+  });
+
+  it('GET entries orders by env_dependent', async () => {
+    await seedEntry('a-dependent', true);
+    await seedEntry('z-independent');
+    const res = await http
+      .get('/namespaces/users/entries')
+      .query({ sort: 'env_dependent', direction: 'asc' });
+    expect(res.body.items.map((e: { name: string }) => e.name)).toEqual([
+      'z-independent',
+      'a-dependent',
+    ]);
+  });
+
+  it('GET entries orders by name descending', async () => {
+    await seedEntry('alpha');
+    await seedEntry('zeta');
+    const res = await http.get('/namespaces/users/entries').query({ direction: 'desc' });
+    expect(res.body.items.map((e: { name: string }) => e.name)).toEqual(['zeta', 'alpha']);
+  });
+
+  it('GET entries returns a later page with totals', async () => {
+    await seedEntry('a');
+    await seedEntry('b');
+    const res = await http.get('/namespaces/users/entries').query({ page: 2 });
+    expect(res.body).toMatchObject({ page: 2, items: [], total_items: 2 });
+  });
+});
+
 describe('Entry endpoints', () => {
   beforeEach(async () => {
     await http.post('/namespaces').send({ name: 'users' });
@@ -228,8 +462,8 @@ describe('Entry endpoints', () => {
     await http.post('/namespaces/users/entries').send({ name: 'zeta', value: '1' });
     await http.post('/namespaces/users/entries').send({ name: 'alpha', value: '2' });
     const res = await http.get('/namespaces/users/entries');
-    expect(res.body.map((e: { name: string }) => e.name)).toEqual(['alpha', 'zeta']);
-    for (const entry of res.body) {
+    expect(res.body.items.map((e: { name: string }) => e.name)).toEqual(['alpha', 'zeta']);
+    for (const entry of res.body.items) {
       expect(entry.created_at).toEqual(expect.any(String));
       expect(entry.modified_at).toEqual(expect.any(String));
     }
@@ -321,7 +555,7 @@ describe('Entry endpoints', () => {
       .post('/namespaces/users/entries')
       .send({ name: 'admin', value: 'v', description: 'docs' });
     const res = await http.get('/namespaces/users/entries');
-    expect(res.body[0].description).toBe('docs');
+    expect(res.body.items[0].description).toBe('docs');
   });
 
   it('POST stores an entry env_dependent marker', async () => {
@@ -355,7 +589,7 @@ describe('Entry endpoints', () => {
       .send({ name: 'db-host', value: 'localhost', env_dependent: true });
     await http.post('/namespaces/users/entries').send({ name: 'retries', value: '3' });
     const res = await http.get('/namespaces/users/entries');
-    expect(res.body).toMatchObject([
+    expect(res.body.items).toMatchObject([
       { name: 'db-host', env_dependent: true },
       { name: 'retries', env_dependent: false },
     ]);
@@ -479,7 +713,7 @@ describe('YAML endpoints', () => {
     const res = await http.post('/yaml/import').field('description', 'no file here');
     expect(res.status).toBe(400);
     expect(res.body.error).not.toHaveProperty('stack');
-    expect((await http.get('/namespaces')).body).toEqual([]);
+    expect((await http.get('/namespaces')).body.items).toEqual([]);
   });
 
   it('POST /yaml/import returns 400 for an empty multipart file', async () => {
@@ -489,7 +723,7 @@ describe('YAML endpoints', () => {
     });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_YAML');
-    expect((await http.get('/namespaces')).body).toEqual([]);
+    expect((await http.get('/namespaces')).body.items).toEqual([]);
   });
 
   it('POST /yaml/import rejects an oversized multipart file with a safe error', async () => {
@@ -500,7 +734,7 @@ describe('YAML endpoints', () => {
     expect(res.status).toBe(413);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
     expect(res.body.error).not.toHaveProperty('stack');
-    expect((await http.get('/namespaces')).body).toEqual([]);
+    expect((await http.get('/namespaces')).body.items).toEqual([]);
   });
 
   it('POST /yaml/import returns 400 for invalid uploaded YAML', async () => {
@@ -512,7 +746,7 @@ describe('YAML endpoints', () => {
       });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_YAML');
-    expect((await http.get('/namespaces')).body).toEqual([]);
+    expect((await http.get('/namespaces')).body.items).toEqual([]);
   });
 
   it('POST /yaml/import accepts but ignores supplied timestamp metadata', async () => {
@@ -767,5 +1001,95 @@ describe('OpenAPI document', () => {
     expect(schemas.YamlImportResponse.properties.namespaces.items.$ref).toContain(
       'NamespaceResponse',
     );
+  });
+
+  it('documents paginated list response bodies for namespaces and entries', async () => {
+    const { body } = await http.get('/docs-json');
+    const schemas = body.components.schemas;
+
+    for (const schema of ['PaginatedNamespaceListResponse', 'PaginatedEntryListResponse']) {
+      expect(schemas).toHaveProperty(schema);
+      for (const field of ['items', 'page', 'page_size', 'total_items', 'total_pages']) {
+        expect(schemas[schema].properties[field]).toBeDefined();
+      }
+      // Every field is always present on a list response, so all are required.
+      expect(schemas[schema].required).toEqual(
+        expect.arrayContaining(['items', 'page', 'page_size', 'total_items', 'total_pages']),
+      );
+    }
+
+    expect(schemas.PaginatedNamespaceListResponse.properties.items.items.$ref).toContain(
+      'NamespaceListItemResponse',
+    );
+    expect(schemas.PaginatedEntryListResponse.properties.items.items.$ref).toContain(
+      'EntryResponse',
+    );
+
+    // The list endpoints return the paginated bodies, not arrays.
+    expect(
+      body.paths['/namespaces'].get.responses['200'].content['application/json'].schema.$ref,
+    ).toContain('PaginatedNamespaceListResponse');
+    expect(
+      body.paths['/namespaces/{namespace}/entries'].get.responses['200'].content['application/json']
+        .schema.$ref,
+    ).toContain('PaginatedEntryListResponse');
+  });
+
+  it('documents namespace list items without entries and namespace detail with entries', async () => {
+    const { body } = await http.get('/docs-json');
+    const schemas = body.components.schemas;
+
+    // A page of namespaces must not carry every entry of every namespace on it.
+    expect(schemas.NamespaceListItemResponse.properties).not.toHaveProperty('entries');
+    expect(Object.keys(schemas.NamespaceListItemResponse.properties).sort()).toEqual([
+      'created_at',
+      'description',
+      'modified_at',
+      'name',
+    ]);
+
+    // Entries stay readable from the namespace detail endpoint.
+    expect(schemas.NamespaceResponse.properties).toHaveProperty('entries');
+    expect(
+      body.paths['/namespaces/{name}'].get.responses['200'].content['application/json'].schema.$ref,
+    ).toContain('NamespaceResponse');
+  });
+
+  it('documents allowlisted list query parameters for namespaces and entries', async () => {
+    const { body } = await http.get('/docs-json');
+    const queryParams = (path: string): Record<string, { schema: Record<string, unknown> }> =>
+      Object.fromEntries(
+        (body.paths[path].get.parameters ?? [])
+          .filter((param: { in: string }) => param.in === 'query')
+          .map((param: { name: string }) => [param.name, param]),
+      );
+
+    const namespaceQuery = queryParams('/namespaces');
+    const entryQuery = queryParams('/namespaces/{namespace}/entries');
+
+    for (const query of [namespaceQuery, entryQuery]) {
+      // Page size is an enum, not a free number, so the allowlist is discoverable.
+      expect(query.page_size.schema.enum).toEqual([10, 50, 100]);
+      expect(query.page_size.schema.default).toBe(10);
+      expect(query.page.schema.minimum).toBe(1);
+      expect(query.direction.schema.enum).toEqual(['asc', 'desc']);
+      expect(query.name.schema.type).toBe('string');
+      // Query parameters are optional; the API applies documented defaults.
+      for (const param of Object.values(query)) {
+        expect((param as { required?: boolean }).required ?? false).toBe(false);
+      }
+    }
+
+    expect(namespaceQuery.sort.schema.enum).toEqual(['name', 'created_at', 'modified_at']);
+    expect(entryQuery.sort.schema.enum).toEqual([
+      'name',
+      'created_at',
+      'modified_at',
+      'env_dependent',
+    ]);
+
+    // The env_dependent filter is entry-only; namespaces have no such field.
+    expect(entryQuery.env_dependent.schema.type).toBe('boolean');
+    expect(namespaceQuery).not.toHaveProperty('env_dependent');
   });
 });

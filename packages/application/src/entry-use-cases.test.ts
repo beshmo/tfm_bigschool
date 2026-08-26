@@ -9,6 +9,7 @@ import {
   Namespace,
   NamespaceNotFoundError,
 } from '@okvns/domain';
+import type { EntryListQuery } from '@okvns/shared';
 import { FakeNamespaceRepository } from './testing/fake-namespace-repository.js';
 import {
   CreateEntryUseCase,
@@ -110,18 +111,51 @@ describe('CreateEntryUseCase', () => {
 });
 
 describe('ListEntriesUseCase', () => {
-  it('GIVEN entries WHEN listed THEN they are returned in name order', async () => {
+  const query: EntryListQuery = { page: 1, page_size: 10, sort: 'name', direction: 'asc' };
+
+  it('GIVEN entries WHEN listed THEN they are returned in name order with page metadata', async () => {
     const ns = await repository.findByName('users');
     ns!.addEntry(Entry.create('zeta', '1'));
     ns!.addEntry(Entry.create('alpha', '2'));
-    const result = await new ListEntriesUseCase(repository).execute('users');
-    expect(result.map((e) => e.name)).toEqual(['alpha', 'zeta']);
+    const result = await new ListEntriesUseCase(repository).execute('users', query);
+    expect(result.items.map((e) => e.name)).toEqual(['alpha', 'zeta']);
+    expect(result).toMatchObject({ page: 1, page_size: 10, total_items: 2, total_pages: 1 });
+  });
+
+  it('GIVEN more entries than fit a page WHEN a page is listed THEN it is capped and totals count all matches', async () => {
+    const ns = await repository.findByName('users');
+    for (const name of ['a', 'b', 'c']) {
+      ns!.addEntry(Entry.create(name, '1'));
+    }
+    const result = await new ListEntriesUseCase(repository).execute('users', {
+      ...query,
+      page: 2,
+      page_size: 10,
+    });
+    expect(result.items).toEqual([]);
+    expect(result).toMatchObject({ page: 2, total_items: 3, total_pages: 1 });
+  });
+
+  it('GIVEN a filter matching nothing WHEN listed THEN the page is empty and reports no pages', async () => {
+    const ns = await repository.findByName('users');
+    ns!.addEntry(Entry.create('admin', '1'));
+    const result = await new ListEntriesUseCase(repository).execute('users', {
+      ...query,
+      name: 'nope',
+    });
+    expect(result).toEqual({
+      items: [],
+      page: 1,
+      page_size: 10,
+      total_items: 0,
+      total_pages: 0,
+    });
   });
 
   it('GIVEN a missing namespace WHEN listed THEN it throws NamespaceNotFoundError', async () => {
-    await expect(new ListEntriesUseCase(repository).execute('missing')).rejects.toBeInstanceOf(
-      NamespaceNotFoundError,
-    );
+    await expect(
+      new ListEntriesUseCase(repository).execute('missing', query),
+    ).rejects.toBeInstanceOf(NamespaceNotFoundError);
   });
 });
 

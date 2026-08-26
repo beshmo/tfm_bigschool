@@ -4,6 +4,7 @@ import {
   ENTRY_VALUE_MAX_LENGTH,
   RESOURCE_NAME_MAX_LENGTH,
 } from '@okvns/shared';
+import { PaginatedResponse } from '../common/paginated.schema';
 
 /** Documented entry response body. */
 export class EntryResponse {
@@ -49,3 +50,6 @@ export class EntryResponse {
   })
   modified_at!: string;
 }
+
+/** Documented paginated entry list response body. */
+export class PaginatedEntryListResponse extends PaginatedResponse(EntryResponse) {}

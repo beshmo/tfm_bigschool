@@ -10,11 +10,94 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('HttpOkvnsApi', () => {
-  it('GET listNamespaces maps a successful response body', async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse([{ name: 'users', entries: [] }]));
+  it('GET listNamespaces maps a paginated response body', async () => {
+    const page = {
+      items: [{ name: 'users', created_at: 'c', modified_at: 'm' }],
+      page: 1,
+      page_size: 10,
+      total_items: 1,
+      total_pages: 1,
+    };
+    const fetchImpl = vi.fn(async () => jsonResponse(page));
     const api = new HttpOkvnsApi('http://api.test', fetchImpl);
-    expect(await api.listNamespaces()).toEqual([{ name: 'users', entries: [] }]);
+    // Items and metadata reach components without being dropped or renamed.
+    expect(await api.listNamespaces()).toEqual(page);
     expect(fetchImpl).toHaveBeenCalledWith('http://api.test/namespaces', undefined);
+  });
+
+  it('GET listNamespaces sends no query string when nothing is selected', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ items: [] }));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.listNamespaces({});
+    expect(fetchImpl).toHaveBeenCalledWith('http://api.test/namespaces', undefined);
+  });
+
+  it('GET listNamespaces maps a list query onto query parameters', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ items: [] }));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.listNamespaces({ page: 2, page_size: 50, sort: 'created_at', direction: 'desc' });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces?page=2&page_size=50&sort=created_at&direction=desc',
+      undefined,
+    );
+  });
+
+  it('GET listNamespaces omits unset query fields so the API applies its defaults', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ items: [] }));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.listNamespaces({ page: 3, name: undefined });
+    expect(fetchImpl).toHaveBeenCalledWith('http://api.test/namespaces?page=3', undefined);
+  });
+
+  it('GET listNamespaces escapes a name filter', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ items: [] }));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.listNamespaces({ name: 'a b&c' });
+    expect(fetchImpl).toHaveBeenCalledWith('http://api.test/namespaces?name=a+b%26c', undefined);
+  });
+
+  it('GET listEntries maps a paginated response body', async () => {
+    const page = {
+      items: [
+        {
+          name: 'admin',
+          value: 'secret',
+          env_dependent: true,
+          created_at: 'c',
+          modified_at: 'm',
+        },
+      ],
+      page: 1,
+      page_size: 10,
+      total_items: 1,
+      total_pages: 1,
+    };
+    const fetchImpl = vi.fn(async () => jsonResponse(page));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    expect(await api.listEntries('users')).toEqual(page);
+    expect(fetchImpl).toHaveBeenCalledWith('http://api.test/namespaces/users/entries', undefined);
+  });
+
+  it('GET listEntries maps an entry list query onto query parameters', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ items: [] }));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    await api.listEntries('users', { page_size: 100, sort: 'env_dependent', env_dependent: true });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces/users/entries?page_size=100&sort=env_dependent&env_dependent=true',
+      undefined,
+    );
+  });
+
+  it('GET listEntries sends env_dependent=false rather than dropping it', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ items: [] }));
+    const api = new HttpOkvnsApi('http://api.test', fetchImpl);
+    // `false` is a real filter (show only non-environment-dependent entries),
+    // distinct from omitting the field to show all entries.
+    await api.listEntries('users', { env_dependent: false });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'http://api.test/namespaces/users/entries?env_dependent=false',
+      undefined,
+    );
   });
 
   it('POST createNamespace sends a JSON body', async () => {

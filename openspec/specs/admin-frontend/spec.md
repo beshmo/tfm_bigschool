@@ -5,7 +5,7 @@ React admin frontend for the OKVNS platform. Provides browser-based namespace ma
 ## Requirements
 
 ### Requirement: Admin namespace management UI
-The React admin frontend SHALL allow admin users to list, create, edit, view, and delete namespaces through the OKVNS API, and SHALL display namespace description and timestamp metadata returned by list and detail operations.
+The React admin frontend SHALL allow admin users to list, page, order, filter, create, edit, view, and delete namespaces through the OKVNS API, and SHALL display namespace description and timestamp metadata returned by list and detail operations.
 
 #### Scenario: Admin creates namespace
 - **WHEN** an admin submits a valid namespace creation form with an optional description
@@ -23,8 +23,23 @@ The React admin frontend SHALL allow admin users to list, create, edit, view, an
 - **WHEN** an admin views the namespace list or a namespace detail page
 - **THEN** the UI displays the namespace `created_at` and `modified_at` values returned by the API
 
+#### Scenario: Admin pages namespaces
+- **WHEN** an admin selects a namespace page size of `10`, `50`, or `100` or navigates between namespace pages
+- **THEN** the UI requests the selected namespace page from the API
+- **AND** the UI displays the current page and available pagination controls from the API metadata
+
+#### Scenario: Admin orders namespaces
+- **WHEN** an admin orders namespaces by name, creation date, or modification date
+- **THEN** the UI requests namespaces from the API using the selected ordering
+- **AND** the displayed namespace list reflects the API-ordered result
+
+#### Scenario: Admin filters namespaces by name
+- **WHEN** an admin filters namespaces by name
+- **THEN** the UI requests namespaces from the API using the entered name filter
+- **AND** the displayed namespace list and pagination metadata reflect the filtered result
+
 ### Requirement: Admin entry management UI
-The React admin frontend SHALL allow admin users to list, create, edit, view, filter, and delete entries within a selected namespace through the OKVNS API, and SHALL display entry description, `env_dependent`, and timestamp metadata returned by list and detail operations.
+The React admin frontend SHALL allow admin users to list, page, order, filter, create, edit, view, and delete entries within a selected namespace through the OKVNS API, and SHALL display entry description, `env_dependent`, and timestamp metadata returned by list and detail operations.
 
 #### Scenario: Admin creates entry
 - **WHEN** an admin submits a valid entry form with an optional description and optional environment-dependent marker for a namespace
@@ -40,7 +55,7 @@ The React admin frontend SHALL allow admin users to list, create, edit, view, fi
 
 #### Scenario: Admin locates environment-dependent entries
 - **WHEN** an admin views a namespace containing entries with `env_dependent` set to `true`
-- **THEN** the UI provides a way to show only environment-dependent entries
+- **THEN** the UI provides a way to show only environment-dependent entries by requesting an API-filtered entry list
 - **AND** the filtered view identifies entries that require cross-environment adjustment
 
 #### Scenario: Admin deletes entry
@@ -50,6 +65,21 @@ The React admin frontend SHALL allow admin users to list, create, edit, view, fi
 #### Scenario: Admin views entry timestamps
 - **WHEN** an admin views entries in a namespace detail page
 - **THEN** the UI displays each entry's `created_at` and `modified_at` values returned by the API
+
+#### Scenario: Admin pages entries
+- **WHEN** an admin selects an entry page size of `10`, `50`, or `100` or navigates between entry pages
+- **THEN** the UI requests the selected entry page from the API
+- **AND** the UI displays the current page and available pagination controls from the API metadata
+
+#### Scenario: Admin orders entries
+- **WHEN** an admin orders entries by name, creation date, modification date, or environment-dependence
+- **THEN** the UI requests entries from the API using the selected ordering
+- **AND** the displayed entry list reflects the API-ordered result
+
+#### Scenario: Admin filters entries by name
+- **WHEN** an admin filters entries by name
+- **THEN** the UI requests entries from the API using the entered name filter
+- **AND** the displayed entry list and pagination metadata reflect the filtered result
 
 ### Requirement: Admin YAML import UI
 The React admin frontend SHALL allow admin users to paste YAML content or upload a YAML file and import namespaces and entries through the OKVNS API. Pasted YAML MUST be submitted through the JSON `yaml` request field. Uploaded YAML files MUST be submitted directly as `multipart/form-data` using a single file field named `file`.
@@ -102,8 +132,17 @@ The React admin frontend SHALL isolate API request/response mapping from compone
 - **WHEN** the API client receives entry responses with `env_dependent`
 - **THEN** it exposes that boolean field to frontend components without dropping or renaming it
 
+#### Scenario: Paginated list responses are available to components
+- **WHEN** the API client receives namespace or entry list responses with `items`, `page`, `page_size`, `total_items`, and `total_pages`
+- **THEN** it exposes the list items and pagination metadata to frontend components without dropping or renaming them
+
+#### Scenario: Namespace list items are exposed without entries
+- **WHEN** the API client receives a paginated namespace list response
+- **THEN** it exposes lightweight namespace list items without an `entries` array
+- **AND** entry collections are read through namespace detail or paginated entry list calls
+
 ### Requirement: Initial E2E workflows
-The project SHALL include Playwright workflows for namespace CRUD, entry CRUD, YAML import, and YAML export.
+The project SHALL include Playwright workflows for namespace CRUD, entry CRUD, YAML import, YAML export, and API-backed list controls.
 
 #### Scenario: Namespace CRUD workflow is exercised
 - **WHEN** the Playwright suite runs against the local app
@@ -120,3 +159,7 @@ The project SHALL include Playwright workflows for namespace CRUD, entry CRUD, Y
 #### Scenario: YAML export workflow is exercised
 - **WHEN** the Playwright suite runs against the local app
 - **THEN** it exports all namespaces and a selected namespace through the browser YAML export UI
+
+#### Scenario: List controls workflow is exercised
+- **WHEN** the Playwright suite runs against the local app
+- **THEN** it verifies API-backed namespace and entry page size, ordering, and filtering controls through the browser UI
