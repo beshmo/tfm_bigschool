@@ -1,6 +1,7 @@
 # Build context is the repository root: docker build -f apps/api/Dockerfile .
 FROM node:26-alpine AS build
-RUN corepack enable
+# Node 26 no longer bundles Corepack; install it explicitly before enabling it.
+RUN npm install -g corepack@latest && corepack enable
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile
