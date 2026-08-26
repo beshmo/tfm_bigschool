@@ -11,6 +11,15 @@ const schemaLockName = 'okvns_test_schema';
 const schemaLockTimeoutSeconds = 120;
 
 /**
+ * Hook budget for acquiring the lock. A waiting file blocks for as long as the
+ * file ahead of it takes to run, so this must exceed `schemaLockTimeoutSeconds`
+ * — otherwise Vitest's default 10s hook timeout fires first and the wait fails
+ * as a timeout instead of the lock wait completing (or reporting its own,
+ * clearer timeout). The margin lets the lock's own error surface.
+ */
+const schemaLockHookTimeoutMs = (schemaLockTimeoutSeconds + 10) * 1000;
+
+/**
  * MySQL integration-test support. Tests opt in by setting connection env vars
  * (`OKVNS_TEST_MYSQL_HOST`, ...). When they are absent the suite is skipped so
  * the default `pnpm test` needs no database.
@@ -49,6 +58,10 @@ function createTestPool(): Pool {
  * reset wipes rows out from under another file's in-flight test. Each file
  * holds a MySQL advisory lock for its whole run, so the database-backed files
  * take turns while the rest of the suite still runs in parallel.
+ *
+ * Taking turns means a file's `beforeAll` blocks for however long the file
+ * ahead of it runs, so it gets an explicit `schemaLockHookTimeoutMs` budget
+ * rather than Vitest's 10s default.
  */
 export function useMysqlTestSchema(): () => Pool {
   let pool: Pool;
@@ -57,7 +70,7 @@ export function useMysqlTestSchema(): () => Pool {
   beforeAll(async () => {
     pool = createTestPool();
     releaseSchemaLock = await acquireSchemaLock(pool);
-  });
+  }, schemaLockHookTimeoutMs);
 
   // Tolerate a failed beforeAll (an unreachable database, say) so teardown
   // reports that failure rather than masking it with one of its own.

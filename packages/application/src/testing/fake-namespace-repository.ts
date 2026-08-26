@@ -1,5 +1,12 @@
-import { DuplicateNamespaceError, NamespaceNotFoundError, type Namespace } from '@okvns/domain';
-import type { NamespaceRepository } from '../ports.js';
+import {
+  DuplicateNamespaceError,
+  NamespaceNotFoundError,
+  type Entry,
+  type Namespace,
+} from '@okvns/domain';
+import type { EntryListQuery, NamespaceListQuery } from '@okvns/shared';
+import { queryEntries, queryNamespaces } from '../list-query.js';
+import type { NamespaceRepository, NamespaceSummary, PageResult } from '../ports.js';
 
 /** In-memory test double mirroring the production in-memory adapter semantics. */
 export class FakeNamespaceRepository implements NamespaceRepository {
@@ -7,6 +14,18 @@ export class FakeNamespaceRepository implements NamespaceRepository {
 
   async list(): Promise<Namespace[]> {
     return [...this.store.values()];
+  }
+
+  async listPage(query: NamespaceListQuery): Promise<PageResult<NamespaceSummary>> {
+    return queryNamespaces([...this.store.values()], query);
+  }
+
+  async listEntriesPage(
+    namespaceName: string,
+    query: EntryListQuery,
+  ): Promise<PageResult<Entry> | null> {
+    const namespace = this.store.get(namespaceName);
+    return namespace ? queryEntries(namespace.listEntries(), query) : null;
   }
 
   async findByName(name: string): Promise<Namespace | null> {

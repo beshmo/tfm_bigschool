@@ -65,7 +65,7 @@ describe('ExportPage', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Export all namespaces' }));
 
-    const output = (await screen.findByLabelText('Exported YAML')) as HTMLTextAreaElement;
+    const output = (await screen.findByLabelText('Output')) as HTMLTextAreaElement;
     expect(output.value).toContain('users');
     expect(output.value).toContain('settings');
   });
@@ -81,7 +81,7 @@ describe('ExportPage', () => {
     await userEvent.selectOptions(await screen.findByLabelText('Namespace'), 'settings');
     await userEvent.click(screen.getByRole('button', { name: 'Export selected namespace' }));
 
-    const output = (await screen.findByLabelText('Exported YAML')) as HTMLTextAreaElement;
+    const output = (await screen.findByLabelText('Output')) as HTMLTextAreaElement;
     expect(output.value).toContain('settings');
     expect(output.value).not.toContain('users');
   });

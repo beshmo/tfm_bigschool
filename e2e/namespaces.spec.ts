@@ -17,26 +17,27 @@ test('namespace CRUD workflow', async ({ page }) => {
   await page.getByLabel('Description (optional)', { exact: true }).fill('created by e2e');
   await page.getByRole('button', { name: 'Create namespace' }).click();
   await expect(page.getByRole('link', { name: ns, exact: true })).toBeVisible();
-  await expect(page.locator('p', { hasText: 'created by e2e' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'created by e2e' })).toBeVisible();
 
   // Read (open detail)
   await page.getByRole('link', { name: ns, exact: true }).click();
-  await expect(page.getByRole('heading', { name: `Namespace: ${ns}` })).toBeVisible();
+  await expect(page.getByRole('heading', { name: ns })).toBeVisible();
 
-  // Update (description). The displayed paragraph reflects server-confirmed
-  // state, so waiting on it (rather than on the textarea we just typed into)
-  // guarantees the reload finished before the rename below.
+  // Update (description). The page subheading reflects server-confirmed state,
+  // so waiting on it (rather than on the field we just typed into) guarantees
+  // the reload finished before the rename below.
   await page.getByLabel('Description (optional)', { exact: true }).fill('updated by e2e');
   await page.getByRole('button', { name: 'Save description' }).click();
-  await expect(page.locator('p', { hasText: 'updated by e2e' })).toBeVisible();
+  await expect(page.locator('p.sub')).toContainText('updated by e2e');
 
   // Update (rename) preserves the description
   await page.getByLabel('New name').fill(renamed);
   await page.getByRole('button', { name: 'Rename' }).click();
-  await expect(page.getByRole('heading', { name: `Namespace: ${renamed}` })).toBeVisible();
-  await expect(page.locator('p', { hasText: 'updated by e2e' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: renamed })).toBeVisible();
+  await expect(page.locator('p.sub')).toContainText('updated by e2e');
 
-  // Delete
+  // Delete, which now asks for confirmation first
   await page.getByRole('button', { name: `Delete namespace ${renamed}` }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByRole('link', { name: renamed, exact: true })).toHaveCount(0);
 });

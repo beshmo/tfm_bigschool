@@ -36,23 +36,16 @@ Data persistence and restart behavior:
 
 Logs go to stdout/stderr.
 
-## Kubernetes
+## Kubernetes Manifests
 
 Manifests live in `deploy/k8s/` and deploy resources into the `okvns` namespace.
 
-Build local images:
+The manifests use the published Docker Hub images by default:
 
-```bash
-docker build -f apps/api/Dockerfile -t okvns/api:latest .
-docker build -f apps/admin-web/Dockerfile -t okvns/admin-web:latest .
-```
-
-Load images into your cluster when required, for example with kind:
-
-```bash
-kind load docker-image okvns/api:latest
-kind load docker-image okvns/admin-web:latest
-```
+| Workload  | Image                                |
+| --------- | ------------------------------------ |
+| API       | `beshmo/okvns:okvns-api-1.0.1`       |
+| Admin web | `beshmo/okvns:okvns-admin-web-1.0.1` |
 
 Apply manifests:
 
@@ -60,6 +53,36 @@ Apply manifests:
 kubectl apply -f deploy/k8s/
 kubectl -n okvns get pods
 ```
+
+To test local image builds instead, edit the image fields in `deploy/k8s/20-api.yaml`
+and `deploy/k8s/40-web.yaml`, then load the images into your cluster when required,
+for example with kind:
+
+```bash
+docker build -f apps/api/Dockerfile -t okvns/api:latest .
+docker build -f apps/admin-web/Dockerfile -t okvns/admin-web:latest .
+kind load docker-image okvns/api:latest
+kind load docker-image okvns/admin-web:latest
+```
+
+Production images are published by CI to the public Docker Hub repository
+`beshmo/okvns` for the API and admin frontend only:
+
+| Asset     | Dockerfile                  | Example tags                                                                                                        |
+| --------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| API       | `apps/api/Dockerfile`       | `beshmo/okvns:okvns-api-main`, `beshmo/okvns:okvns-api-sha-<sha>`, `beshmo/okvns:okvns-api-1.2.3`                   |
+| Admin web | `apps/admin-web/Dockerfile` | `beshmo/okvns:okvns-admin-web-main`, `beshmo/okvns:okvns-admin-web-sha-<sha>`, `beshmo/okvns:okvns-admin-web-1.2.3` |
+
+Pull request CI builds these production images without pushing them. Pushes to
+`main` publish branch and SHA tags, and Git tags like `v1.2.3` publish
+versioned asset tags. The demo web image is not part of the production image
+publishing flow.
+
+Docker Hub publishing requires these GitHub repository secrets:
+
+- `DOCKERHUB_USERNAME`: Docker Hub user name, for example `beshmo`.
+- `DOCKERHUB_TOKEN`: Docker Hub access token. Use an access token rather than a
+  Docker Hub account password so CI credentials can be revoked independently.
 
 The manifests create:
 
@@ -73,7 +96,58 @@ The manifests create:
 
 The MySQL `PersistentVolumeClaim` keeps namespace/entry data across API pod
 restarts and rescheduling. Restarting or replacing the API pod does not clear
-data; deleting the PVC does.
+data; deleting the PVC does. The reference manifests set
+`storageClassName: do-block-storage` for DigitalOcean Kubernetes block storage.
+
+## Helm
+
+The Helm chart lives in `deploy/helm/okvns/` and renders the same reference
+deployment as the raw Kubernetes manifests. Default values use:
+
+- API image: `beshmo/okvns:okvns-api-1.0.1`
+- Admin web image: `beshmo/okvns:okvns-admin-web-1.0.1`
+- Namespace: `okvns`
+
+Render the chart locally:
+
+```bash
+helm template okvns deploy/helm/okvns
+```
+
+Install the chart:
+
+```bash
+helm install okvns deploy/helm/okvns
+kubectl -n okvns get pods
+```
+
+The chart includes a Namespace template by default. To use a namespace that is
+managed outside the chart, disable namespace creation and set the target
+namespace explicitly:
+
+```bash
+helm install okvns deploy/helm/okvns \
+  --set namespace.create=false \
+  --set namespace.name=okvns
+```
+
+Override image tags or other runtime settings with `--set` or a custom values
+file:
+
+```bash
+helm upgrade --install okvns deploy/helm/okvns \
+  --set api.image.tag=okvns-api-1.0.1 \
+  --set adminWeb.image.tag=okvns-admin-web-1.0.1
+```
+
+The chart defaults MySQL persistence to the DigitalOcean Kubernetes block
+storage class, `do-block-storage`. Override `mysql.persistence.storageClassName`
+when deploying to a cluster with a different storage class.
+
+Before deploying outside a local/dev cluster, replace the placeholder MySQL
+credentials in `deploy/helm/okvns/values.yaml` or provide overrides for
+`mysql.credentials.rootPassword`, `mysql.credentials.user`, and
+`mysql.credentials.password`.
 
 ## Configuration
 

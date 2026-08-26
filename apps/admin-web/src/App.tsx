@@ -3,13 +3,25 @@ import { NamespacesPage } from './pages/NamespacesPage';
 import { NamespaceDetailPage } from './pages/NamespaceDetailPage';
 import { ImportPage } from './pages/ImportPage';
 import { ExportPage } from './pages/ExportPage';
+import { Icon } from './components/Icon';
+import { ToastProvider } from './components/Toast';
+import { getAppVersion } from './config';
 
 export function App() {
+  const appVersion = getAppVersion();
+
   return (
-    <div className="app">
-      <header>
-        <h1 className="brand">OKVNS Admin</h1>
-        <nav>
+    <ToastProvider>
+      <header className="site-header">
+        {/* NavLink marks the active route with aria-current="page", which is the
+            attribute the design system's nav styling keys off. */}
+        <nav className="nav">
+          <span className="brand-lockup">
+            <span className="logo-mark">
+              <Icon name="brackets" size={20} />
+            </span>
+            <span className="nav-brand">OKVNS Admin</span>
+          </span>
           <NavLink to="/" end>
             Namespaces
           </NavLink>
@@ -17,7 +29,8 @@ export function App() {
           <NavLink to="/export">Export</NavLink>
         </nav>
       </header>
-      <main>
+
+      <main className="wrap">
         <Routes>
           <Route path="/" element={<NamespacesPage />} />
           <Route path="/namespaces/:name" element={<NamespaceDetailPage />} />
@@ -25,6 +38,16 @@ export function App() {
           <Route path="/export" element={<ExportPage />} />
         </Routes>
       </main>
-    </div>
+
+      <footer className="site-footer">
+        <span className="footer-mark">
+          <span className="logo-mark">
+            <Icon name="brackets" />
+          </span>
+          OKVNS Admin
+        </span>
+        <span className="footer-version">v{appVersion}</span>
+      </footer>
+    </ToastProvider>
   );
 }

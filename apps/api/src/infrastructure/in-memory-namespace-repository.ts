@@ -1,6 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import type { NamespaceRepository } from '@okvns/application';
-import { DuplicateNamespaceError, NamespaceNotFoundError, type Namespace } from '@okvns/domain';
+import {
+  queryEntries,
+  queryNamespaces,
+  type NamespaceRepository,
+  type NamespaceSummary,
+  type PageResult,
+} from '@okvns/application';
+import {
+  DuplicateNamespaceError,
+  NamespaceNotFoundError,
+  type Entry,
+  type Namespace,
+} from '@okvns/domain';
+import type { EntryListQuery, NamespaceListQuery } from '@okvns/shared';
 
 /**
  * In-memory implementation of the namespace repository port. State lives only
@@ -22,6 +34,24 @@ export class InMemoryNamespaceRepository implements NamespaceRepository {
 
   async list(): Promise<Namespace[]> {
     return [...this.store.values()].map((namespace) => namespace.clone());
+  }
+
+  async listPage(query: NamespaceListQuery): Promise<PageResult<NamespaceSummary>> {
+    // Summaries are plain data copied out of the stored aggregates, so callers
+    // get no handle on the store's authoritative namespaces.
+    return queryNamespaces([...this.store.values()], query);
+  }
+
+  async listEntriesPage(
+    namespaceName: string,
+    query: EntryListQuery,
+  ): Promise<PageResult<Entry> | null> {
+    const namespace = this.store.get(namespaceName);
+    if (!namespace) {
+      return null;
+    }
+    // Clone first so the page hands out detached entries, as `findByName` does.
+    return queryEntries(namespace.clone().listEntries(), query);
   }
 
   async findByName(name: string): Promise<Namespace | null> {
