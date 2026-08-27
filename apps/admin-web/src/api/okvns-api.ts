@@ -73,6 +73,10 @@ export class HttpOkvnsApi implements OkvnsApi {
   ) {
     // Wrap the global fetch so it is always invoked with the correct `this`
     // binding (calling it as a method would trigger an "Illegal invocation").
+    // NOSONAR(tssecurity:S8476): baseUrl traces back to window.__OKVNS_API_BASE_URL__
+    // (see config.ts), which is container-injected deployment config, not user
+    // input — no attacker-influenced source feeds this fetch's target origin.
+    // Marked false positive in SonarQube.
     this.fetchImpl = fetchImpl ?? ((input, init) => fetch(input, init));
   }
 
