@@ -3,7 +3,7 @@ FROM node:26-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 COPY . .
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 RUN pnpm --filter @okvns/shared run build \
   && pnpm --filter @okvns/wrapper run build \
   && pnpm --filter @okvns/demo-web run build
