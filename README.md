@@ -94,7 +94,7 @@ With MySQL (durable) — start a database, then apply the schema:
 ```bash
 # Example local MySQL via Docker:
 docker run --name okvns-mysql -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=okvns \
-  -e MYSQL_USER=okvns -e MYSQL_PASSWORD=okvns -p 3306:3306 -d mysql:8.4
+  -e MYSQL_USER=okvns -e MYSQL_PASSWORD=okvns -p 3306:3306 -d mysql:26.7
 
 export OKVNS_MYSQL_HOST=127.0.0.1 OKVNS_MYSQL_DATABASE=okvns \
   OKVNS_MYSQL_USER=okvns OKVNS_MYSQL_PASSWORD=okvns

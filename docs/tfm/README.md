@@ -32,7 +32,7 @@ El repositorio esta organizado como un monorepo TypeScript con pnpm. La solucion
 | Tecnologia        | Uso en el proyecto                                                |
 | ----------------- | ----------------------------------------------------------------- |
 | NestJS            | API REST principal en `apps/api`.                                 |
-| MySQL 8.4         | Persistencia durable de namespaces y entries.                     |
+| MySQL 26.7        | Persistencia durable de namespaces y entries.                     |
 | mysql2            | Cliente de acceso a MySQL desde la capa de infraestructura.       |
 | OpenAPI / Swagger | Documentacion interactiva de la API en `/docs`.                   |
 | Migraciones SQL   | Evolucion del esquema mediante ficheros en `apps/api/migrations`. |
@@ -68,7 +68,7 @@ Para trabajar con el proyecto en local se necesita:
 - Node.js `>= 22.22.1`.
 - Corepack habilitado para usar la version de pnpm declarada por el proyecto.
 - Docker y Docker Compose si se va a ejecutar la plataforma completa con MySQL.
-- Un entorno capaz de ejecutar MySQL 8.4 si se opta por levantar la API fuera de Docker.
+- Un entorno capaz de ejecutar MySQL 26.7 si se opta por levantar la API fuera de Docker.
 
 Habilitar Corepack:
 
@@ -92,7 +92,7 @@ docker compose up --build
 
 Este comando inicia:
 
-- Un servicio MySQL 8.4.
+- Un servicio MySQL 26.7.
 - Un proceso de migracion que crea o actualiza el esquema.
 - La API REST de OKVNS.
 - La aplicacion web de administracion.
@@ -262,18 +262,18 @@ La estructura principal del repositorio es la siguiente:
 
 ### 4.3. Documentacion, despliegue y pruebas
 
-| Ruta                                   | Responsabilidad                                                               |
-| -------------------------------------- | ----------------------------------------------------------------------------- |
-| `docs/api-and-yaml.md`                 | Referencia de endpoints REST, formato de errores, paginacion y contrato YAML. |
-| `docs/architecture.md`                 | Arquitectura, capas, reglas de dependencia y configuracion.                   |
-| `docs/deployment.md`                   | Ejecucion con Docker Compose, Kubernetes, Helm, imagenes y migraciones.       |
-| `docs/engineering-practices.md`        | Practicas de implementacion, testing y calidad.                               |
-| `docs/tfm/okvns-tfm-presentacion.pdf`  | Presentacion del TFM preparada para la defensa del proyecto.                  |
-| `docs/adr`                             | Registro de decisiones de arquitectura.                                       |
-| `deploy/k8s`                           | Manifiestos Kubernetes de referencia.                                         |
-| `deploy/helm/okvns`                    | Chart Helm del despliegue.                                                    |
-| `e2e`                                  | Pruebas end-to-end con Playwright.                                            |
-| `openspec`                             | Especificaciones funcionales y cambios historicos.                            |
+| Ruta                                  | Responsabilidad                                                               |
+| ------------------------------------- | ----------------------------------------------------------------------------- |
+| `docs/api-and-yaml.md`                | Referencia de endpoints REST, formato de errores, paginacion y contrato YAML. |
+| `docs/architecture.md`                | Arquitectura, capas, reglas de dependencia y configuracion.                   |
+| `docs/deployment.md`                  | Ejecucion con Docker Compose, Kubernetes, Helm, imagenes y migraciones.       |
+| `docs/engineering-practices.md`       | Practicas de implementacion, testing y calidad.                               |
+| `docs/tfm/okvns-tfm-presentacion.pdf` | Presentacion del TFM preparada para la defensa del proyecto.                  |
+| `docs/adr`                            | Registro de decisiones de arquitectura.                                       |
+| `deploy/k8s`                          | Manifiestos Kubernetes de referencia.                                         |
+| `deploy/helm/okvns`                   | Chart Helm del despliegue.                                                    |
+| `e2e`                                 | Pruebas end-to-end con Playwright.                                            |
+| `openspec`                            | Especificaciones funcionales y cambios historicos.                            |
 
 ### 4.4. Esquema de componentes
 
@@ -292,7 +292,7 @@ flowchart LR
 
   repoPort --> memory["Repositorio en memoria\nDemos y tests"]
   repoPort --> mysqlAdapter["Adaptador MySQL\nInfraestructura API"]
-  mysqlAdapter --> mysql[("MySQL 8.4\nPersistencia durable")]
+  mysqlAdapter --> mysql[("MySQL 26.7\nPersistencia durable")]
 
   api --> openapi["Swagger / OpenAPI\n/docs y /docs-json"]
 
