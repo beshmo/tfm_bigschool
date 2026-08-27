@@ -56,13 +56,25 @@ Start here when contributing code:
 
 ## Prerequisites
 
-- Node.js >= 22
-- pnpm 11 via Corepack
+Tools required to build, test, and run this stack locally:
 
-Enable Corepack if needed:
+- **Node.js >= 22.22.1** — pinned in `engines.node` (`package.json`).
+- **pnpm 11** — pinned to `11.9.0` via `packageManager` (`package.json`) and used by CI; enable through Corepack.
+- **Docker and Docker Compose v2** — runs the durable MySQL backend locally, the full stack (`docker compose up`), and the API/admin container images. Not needed only if you exclusively use the non-durable `OKVNS_STORAGE_DRIVER=memory` profile and never build images.
+- **Git** — required for cloning and for the Husky pre-commit hook that `pnpm install` sets up automatically (`prepare` script, runs `lint-staged`).
+
+Enable Corepack and pin the exact pnpm version:
 
 ```bash
 corepack enable
+corepack prepare pnpm@11.9.0 --activate
+```
+
+Playwright E2E tests additionally need browser binaries (see [Common Commands](#common-commands)):
+
+```bash
+pnpm test:e2e:install            # installs the Chromium browser
+pnpm test:e2e:install --with-deps  # on Linux, also installs OS-level browser deps (matches CI)
 ```
 
 ## Local Development
