@@ -11,8 +11,13 @@ RUN pnpm --filter @okvns/shared run build \
 FROM nginx:1.31-alpine AS runtime
 ENV OKVNS_API_BASE_URL=http://localhost:3000
 COPY apps/admin-web/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /repo/apps/admin-web/dist /usr/share/nginx/html
+COPY --from=build --chown=nginx:nginx /repo/apps/admin-web/dist /usr/share/nginx/html
 COPY apps/admin-web/docker-entrypoint.sh /docker-entrypoint.d/40-okvns-env.sh
-RUN chmod +x /docker-entrypoint.d/40-okvns-env.sh
+RUN chmod +x /docker-entrypoint.d/40-okvns-env.sh \
+  # The base image's cache/log/pid dirs are root-owned; the nginx master process
+  # needs to write to them itself since there's no root left to drop privileges from.
+  && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
+  && touch /var/run/nginx.pid && chown nginx:nginx /var/run/nginx.pid
 EXPOSE 8080
+USER nginx
 # The stock nginx image runs scripts in /docker-entrypoint.d before starting.
