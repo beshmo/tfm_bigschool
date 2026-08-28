@@ -96,9 +96,11 @@ spec:
             requests:
               cpu: 100m
               memory: 512Mi
+              ephemeral-storage: 512Mi
             limits:
               cpu: '1'
               memory: 1Gi
+              ephemeral-storage: 2Gi
   volumeClaimTemplates:
     - metadata:
         name: data
