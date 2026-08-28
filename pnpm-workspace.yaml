@@ -12,3 +12,5 @@ allowBuilds:
 overrides:
   vite: ^6.4.3
   tmp: ^0.2.6
+  '@nestjs/cli>glob': ^10.5.0
+  '@angular-devkit/core>picomatch': ^4.0.4
