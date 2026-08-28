@@ -17,6 +17,7 @@ spec:
         app.kubernetes.io/name: okvns-api
         app.kubernetes.io/part-of: okvns
     spec:
+      automountServiceAccountToken: false
       # Apply the MySQL schema before the API starts serving so readiness can
       # succeed. Migrations are idempotent, so re-running on each pod start is safe.
       initContainers:

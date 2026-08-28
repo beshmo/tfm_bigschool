@@ -17,6 +17,7 @@ spec:
         app.kubernetes.io/name: okvns-admin-web
         app.kubernetes.io/part-of: okvns
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: admin-web
           image: beshmo/okvns:okvns-admin-web-1.0.1

@@ -55,6 +55,7 @@ spec:
         app.kubernetes.io/name: okvns-mysql
         app.kubernetes.io/part-of: okvns
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: mysql
           image: mysql:26.7
@@ -106,7 +107,7 @@ spec:
         name: data
       spec:
         accessModes: ['ReadWriteOnce']
-        storageClassName: do-block-storage
+        storageClassName: standard
         resources:
           requests:
             storage: 2Gi
