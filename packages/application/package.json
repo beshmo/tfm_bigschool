@@ -25,7 +25,7 @@
     "@okvns/shared": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.6.2",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   }
 }
