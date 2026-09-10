@@ -30,8 +30,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "@typescript-eslint/eslint-plugin": "^8.66.0",
-    "@typescript-eslint/parser": "^8.66.0",
+    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@typescript-eslint/parser": "^8.69.0",
     "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
