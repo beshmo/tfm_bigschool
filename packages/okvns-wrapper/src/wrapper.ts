@@ -50,7 +50,7 @@ export class OkvnsWrapper {
   private readonly injectedFetch: FetchLike | undefined;
 
   constructor(options: OkvnsWrapperOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, '');
+    this.baseUrl = trimTrailingSlashes(options.baseUrl);
     this.injectedFetch = options.fetch;
   }
 
@@ -174,6 +174,21 @@ export class OkvnsWrapper {
       code,
     );
   }
+}
+
+const SLASH_CHAR_CODE = '/'.charCodeAt(0);
+
+/**
+ * Strip trailing '/' characters via a linear scan, not a regex. A backtracking regex
+ * (e.g. `/\/+$/`) retries the match at every start index and is quadratic on crafted
+ * input (CodeQL js/polynomial-redos); this is O(n) worst case with no ambiguity.
+ */
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === SLASH_CHAR_CODE) {
+    end -= 1;
+  }
+  return value.slice(0, end);
 }
 
 /** Narrow an unknown value to an {@link EntryDto} with a string value. */
