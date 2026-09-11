@@ -47,6 +47,10 @@ export function Dialog({
   return (
     <div
       className="dialog-backdrop"
+      // Escape already closes the dialog for keyboard users (see the keydown
+      // listener above); this role only labels the backdrop's click-to-dismiss
+      // gesture so it isn't a bare non-interactive element with a handler.
+      role="button"
       // A click that both starts and ends on the backdrop is a click outside
       // the dialog; checking the target keeps a drag that ends here (say, from
       // selecting text in the dialog) from dismissing it.

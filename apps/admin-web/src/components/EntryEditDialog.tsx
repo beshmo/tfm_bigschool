@@ -83,7 +83,7 @@ export function EntryEditDialog({
             name="env_dependent"
             defaultChecked={entry.env_dependent}
             aria-label={`Environment-dependent for ${entry.name}`}
-          />
+          />{' '}
           Environment-dependent
         </label>
       </form>

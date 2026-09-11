@@ -321,7 +321,7 @@ export function NamespaceDetailPage() {
               type="checkbox"
               checked={entryEnvDependent}
               onChange={(event) => setEntryEnvDependent(event.target.checked)}
-            />
+            />{' '}
             Environment-dependent
           </label>
           <button type="submit" className="btn btn-primary blueprint">
@@ -351,7 +351,7 @@ export function NamespaceDetailPage() {
             onChange={(event) =>
               updateQuery({ env_dependent: event.target.checked ? true : undefined })
             }
-          />
+          />{' '}
           Show only environment-dependent entries
         </label>
 

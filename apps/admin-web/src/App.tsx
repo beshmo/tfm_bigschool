@@ -43,7 +43,7 @@ export function App() {
         <span className="footer-mark">
           <span className="logo-mark">
             <Icon name="brackets" />
-          </span>
+          </span>{' '}
           OKVNS Admin
         </span>
         <span className="footer-version">v{appVersion}</span>

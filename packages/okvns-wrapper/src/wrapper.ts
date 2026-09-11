@@ -176,7 +176,7 @@ export class OkvnsWrapper {
   }
 }
 
-const SLASH_CHAR_CODE = '/'.charCodeAt(0);
+const SLASH_CHAR_CODE = '/'.codePointAt(0);
 
 /**
  * Strip trailing '/' characters via a linear scan, not a regex. A backtracking regex
@@ -185,7 +185,7 @@ const SLASH_CHAR_CODE = '/'.charCodeAt(0);
  */
 function trimTrailingSlashes(value: string): string {
   let end = value.length;
-  while (end > 0 && value.charCodeAt(end - 1) === SLASH_CHAR_CODE) {
+  while (end > 0 && value.codePointAt(end - 1) === SLASH_CHAR_CODE) {
     end -= 1;
   }
   return value.slice(0, end);
