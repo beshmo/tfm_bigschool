@@ -294,7 +294,11 @@ describe('Namespace list query', () => {
 
   it('GET /namespaces orders by created_at rather than by name', async () => {
     // Seeded in reverse name order, so creation order and name order disagree.
-    await seed('zeta', 'alpha');
+    // A short gap guarantees distinct millisecond-resolution createdAt values;
+    // without it, a fast run can tie both timestamps and fall back to name order.
+    await seed('zeta');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await seed('alpha');
     const ascending = await http.get('/namespaces').query({ sort: 'created_at', direction: 'asc' });
     expect(ascending.body.items.map((n: { name: string }) => n.name)).toEqual(['zeta', 'alpha']);
     const descending = await http
