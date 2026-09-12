@@ -2,18 +2,16 @@
 
 TFM project for OKVNS: organized UTF-8 key-value entries inside namespaces.
 
-## Current State
+## OpenSpec Workflow
 
-- This repo is still a seed: no root manifests, lockfiles, app code, CI, or build/test commands exist yet.
-- Active OpenSpec change: `openspec/changes/build-okvns-service/`; use its `proposal.md`, `design.md`, `tasks.md`, and `specs/**/spec.md` as the implementation contract.
-- OpenSpec uses `schema: spec-driven`; before implementing change tasks, prefer `/opsx-apply` or follow `openspec/changes/build-okvns-service/tasks.md` in order.
+- OpenSpec uses `schema: spec-driven`. Active changes live under `openspec/changes/<name>/`; completed ones are archived under `openspec/changes/archive/`. Drive implementation of an active change with `/opsx:apply` (or the change's own `tasks.md`).
 
 ## Confirmed Stack
 
 - Monorepo: `pnpm` workspace.
 - Backend: NestJS API in `apps/api`.
-- Frontend: React + Vite admin app in `apps/admin-web`; adapt any older Angular wording in README to React/React Testing Library.
-- Packages to create: `packages/domain`, `packages/application`, `packages/yaml`, `packages/shared`.
+- Frontend: React + Vite admin app in `apps/admin-web`.
+- Packages: `packages/domain`, `packages/application`, `packages/yaml`, `packages/shared`, `packages/okvns-wrapper`.
 - Tests: Vitest for packages where practical, React Testing Library for frontend, Playwright for E2E, Nest-compatible HTTP contract tests for API.
 - Coverage: package-level `@vitest/coverage-v8`; domain and application target 100%.
 
@@ -36,8 +34,6 @@ TFM project for OKVNS: organized UTF-8 key-value entries inside namespaces.
 
 ## Verification Notes
 
-- Until package manifests exist, there are no runnable repo commands to trust.
-- Once scaffolded, add and document root scripts for `build`, `lint`, `test`, `test:coverage`, and Playwright workflows.
 - API contract tests must cover every documented endpoint, validation failures, duplicates, not-found cases, status codes, and safe error shapes.
 - Use BDD-style test names when it improves clarity, e.g. `GIVEN valid YAML WHEN it is imported THEN namespaces are stored`.
 
