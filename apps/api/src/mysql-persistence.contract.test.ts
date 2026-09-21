@@ -48,6 +48,24 @@ describe.skipIf(!mysqlTestAvailable)('MySQL-backed API persistence (contract)', 
     await second.close();
   });
 
+  it('GIVEN resources stored in MySQL WHEN retrieved THEN timestamps are ISO 8601 UTC with whole seconds', async () => {
+    const app = await createTestApp();
+    const http = request(app.getHttpServer());
+    await http.post('/namespaces').send({ name: 'users' }).expect(201);
+    await http.post('/namespaces/users/entries').send({ name: 'admin', value: 'v' }).expect(201);
+    const res = await http.get('/namespaces/users').expect(200);
+    const wholeSecondUtc = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/;
+    for (const stamp of [
+      res.body.created_at,
+      res.body.modified_at,
+      res.body.entries[0].created_at,
+      res.body.entries[0].modified_at,
+    ]) {
+      expect(stamp).toMatch(wholeSecondUtc);
+    }
+    await app.close();
+  });
+
   it('GIVEN MySQL is reachable with schema WHEN readiness is probed THEN it reports ready', async () => {
     const app = await createTestApp();
     await request(app.getHttpServer()).get('/ready').expect(200, { status: 'ready' });
