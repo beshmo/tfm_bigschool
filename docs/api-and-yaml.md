@@ -156,6 +156,87 @@ Errors use a safe shape and never leak stack traces or implementation details:
 
 Invalid YAML content or shapes surface as `INVALID_YAML` with HTTP 400.
 
+### Error codes
+
+`ERROR_CODES` lives in `packages/shared`; the code → status mapping
+(`STATUS_BY_CODE`) lives in `apps/api/src/common/api-error.ts` and is the single
+source of truth for HTTP statuses.
+
+| Code                  | HTTP status | Meaning                                                                        |
+| --------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `VALIDATION_ERROR`    | 400         | Request failed validation (names, sizes, types, query parameters).             |
+| `INVALID_YAML`        | 400         | Import content is not valid OKVNS YAML (syntax, shape, keys, duplicates).      |
+| `NAMESPACE_NOT_FOUND` | 404         | The addressed namespace does not exist.                                        |
+| `ENTRY_NOT_FOUND`     | 404         | The addressed entry does not exist in the namespace.                           |
+| `DUPLICATE_NAMESPACE` | 409         | A namespace with the same name already exists (create or rename).              |
+| `DUPLICATE_ENTRY`     | 409         | An entry with the same name already exists in the namespace (create/rename).   |
+| `INTERNAL_ERROR`      | 500         | Unexpected failure, or storage unavailable (`/ready` responds 503, see below). |
+
+Framework-level errors (`HttpException`) are mapped by status: a status of 500
+or above becomes `INTERNAL_ERROR`, anything else becomes `VALIDATION_ERROR`
+while keeping the original HTTP status. In particular:
+
+- an unknown route responds 404 with code `VALIDATION_ERROR` (not a
+  `*_NOT_FOUND` code);
+- an oversized import upload responds 413 with code `VALIDATION_ERROR`;
+- a failed readiness check responds 503 with code `INTERNAL_ERROR` and the
+  message `Not ready: storage is unavailable.`;
+- an unhandled exception responds 500 with the generic message
+  `An unexpected error occurred.` and no details.
+
+### `details`
+
+`details` is an optional array of strings. It is present only when there is at
+least one item and omitted otherwise. Request-body validation failures use the
+message `Request validation failed.` with one string per violated rule;
+`INVALID_YAML` errors may carry the parser's messages the same way.
+
+## Success Responses
+
+All timestamps (`created_at`, `modified_at`) are ISO 8601 UTC strings with
+millisecond precision, for example `2026-09-21T10:00:00.000Z`. A namespace's
+`modified_at` also advances when any of its entries changes.
+
+| Route                                        | Status | Body                                       |
+| -------------------------------------------- | ------ | ------------------------------------------ |
+| `GET /health`                                | 200    | `{ "status": "ok" }`                       |
+| `GET /ready`                                 | 200    | `{ "status": "ready" }`                    |
+| `GET /namespaces`                            | 200    | Page of `NamespaceListItem` (no `entries`) |
+| `POST /namespaces`                           | 201    | `Namespace`                                |
+| `GET`/`PUT /namespaces/:name`                | 200    | `Namespace`                                |
+| `DELETE /namespaces/:name`                   | 204    | No body                                    |
+| `GET /namespaces/:name/entries`              | 200    | Page of `Entry`                            |
+| `POST /namespaces/:name/entries`             | 201    | `Entry`                                    |
+| `GET`/`PUT /namespaces/:name/entries/:entry` | 200    | `Entry`                                    |
+| `DELETE /namespaces/:name/entries/:entry`    | 204    | No body                                    |
+| `POST /yaml/import`                          | 201    | `{ "namespaces": [Namespace, ...] }`       |
+| `GET /yaml/export`, `/yaml/export/:name`     | 200    | `{ "yaml": "..." }`                        |
+
+`Namespace`:
+
+```json
+{
+  "name": "billing",
+  "description": "Billing settings",
+  "entries": [
+    {
+      "name": "currency",
+      "value": "EUR",
+      "description": "Default currency",
+      "env_dependent": false,
+      "created_at": "2026-09-21T10:00:00.000Z",
+      "modified_at": "2026-09-21T10:00:00.000Z"
+    }
+  ],
+  "created_at": "2026-09-21T10:00:00.000Z",
+  "modified_at": "2026-09-21T10:00:00.000Z"
+}
+```
+
+`NamespaceListItem` is a `Namespace` without `entries`. `Entry` is the object
+inside `entries` above. `description` is omitted when blank; `env_dependent` is
+always present.
+
 ## YAML Import
 
 The canonical shape uses a `namespaces` array. The original single `namespace` object shape is also accepted on import for compatibility.

@@ -54,6 +54,8 @@ Layers, strictly one-directional (`shared` ← `domain` ← `application` → `y
 - `packages/yaml` — strict OKVNS YAML parser/serializer. Throws its own `YamlError` (carrying an `ERROR_CODES` code), not domain errors. 100% coverage.
 - `apps/api` — NestJS presentation + persistence adapters. `PersistenceModule` (`src/infrastructure/persistence.module.ts`) wires the `NAMESPACE_REPOSITORY` token and readiness indicator from `OKVNS_STORAGE_DRIVER` (MySQL adapter in `src/infrastructure/mysql/`, or the in-memory adapter). Use cases are wired in `app.module.ts` via `useCaseProvider(...)`. The `NamespaceRepository` port has transaction-oriented methods: `create` (insert, unique-constraint backed), atomic `rename`, and atomic `importNamespaces`.
 - `apps/admin-web` — React. **API request/response mapping is isolated** in `src/api/` (`HttpOkvnsApi` implements the `OkvnsApi` port); components consume it through `useApi()` context and never touch `fetch`/status codes directly.
+- `packages/okvns-wrapper` — read-only TypeScript client (`OkvnsWrapper.read(ns, entry, default)`) for external apps; not-found returns the default, other failures throw typed `OkvnsWrapperError` subclasses. See its spec and README.
+- `apps/demo-web` — one-page React demo that reads its copy from the `demo-consumer` namespace through the wrapper; runs in `docker-compose.demo.yml`. Spec: `openspec/specs/demo-web`.
 
 ### Error handling contract
 
@@ -78,9 +80,9 @@ Import validates the **entire** document before mutating anything (atomic) and *
 
 ## Admin frontend design system
 
-`apps/admin-web/src/styles.css` vendors the **Industry** design system (the `Industry` Claude design project) — a steel-blue wireframe look. Its token sheet is the source of truth: take every color, font, spacing, radius and shadow from a `var(--color-*)` / `--font-*` / `--space-*` / `--radius-*` / `--shadow-*` variable, and never hard-code a hex, font name, or raw px the tokens already carry. Build with the system's classes (`.btn`, `.input`, `.field`, `.card`, `.table`, `.tag`, `.dialog`, `.nav`) rather than inventing parallel ones.
+`apps/admin-web/src/styles.css` vendors the **Industry** design system (the `Industry` Claude design project) — a steel-blue wireframe look. Its token sheet is the source of truth: take every color, font, spacing, radius and shadow from a `var(--color-*)` / `--font-*` / `--space-*` / `--radius-*` / `--shadow-*` variable, and never hard-code a hex, font name, or raw px the tokens already carry. Build with the system's classes (`.btn`, `.input`, `.field`, `.table`, `.tag`, `.dialog`, `.nav`, `.panel`) rather than inventing parallel ones. The full token, component and layout sheets are vendored verbatim in `docs/design-tokens.css` and `docs/design-components.css` (see `docs/design-system.md`); edit `styles.css` and both extracts together — `design-tokens.test.ts` fails on drift.
 
-Cards, panels, figures and the primary button are _blueprint objects_: square-cornered, hairline-bordered, and wearing four `+` registration marks — the `.blueprint` class plus a `<Corners />` child. Never drop the marks from a framed element, and never round or surface-fill a card. Icons are Lucide at stroke-width 1.5, inlined in `components/Icon.tsx`.
+Panels, figures and the primary button are _blueprint objects_: square-cornered, hairline-bordered, and wearing four `+` registration marks — the `.blueprint` class plus a `<Corners />` child. Never drop the marks from a framed element, and never round or surface-fill a panel. Icons are Lucide at stroke-width 1.5, inlined in `components/Icon.tsx`.
 
 Dates render through `components/Timestamps.tsx`, which pins `Intl` to `en-US`/UTC so output stays identical on every machine (tests and E2E depend on this) while `<time dateTime>` keeps the API's exact ISO instant.
 

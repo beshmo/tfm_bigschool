@@ -29,6 +29,59 @@ in-memory adapter (`OKVNS_STORAGE_DRIVER=memory`) is retained for fast local
 demos and tests. There is still no authentication, authorization, Redis, queue,
 or filesystem-backed persistence.
 
+### MySQL Schema
+
+Defined by the plain-SQL files in `apps/api/migrations/`. Both tables are
+`ENGINE=InnoDB`, `DEFAULT CHARSET=utf8mb4`, `COLLATE=utf8mb4_bin`, so name
+uniqueness is enforced **case- and accent-sensitively** by the database itself.
+
+`namespaces`
+
+| Column        | Type                                                                       | Notes                        |
+| ------------- | -------------------------------------------------------------------------- | ---------------------------- |
+| `id`          | `BIGINT UNSIGNED AUTO_INCREMENT`                                           | Primary key.                 |
+| `name`        | `VARCHAR(128) NOT NULL`                                                    | `UNIQUE uq_namespaces_name`. |
+| `description` | `VARCHAR(1000) NULL`                                                       | Added by migration 002.      |
+| `created_at`  | `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`                             |                              |
+| `updated_at`  | `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Exposed as `modified_at`.    |
+
+`entries`
+
+| Column          | Type                                                                       | Notes                                                          |
+| --------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `id`            | `BIGINT UNSIGNED AUTO_INCREMENT`                                           | Primary key.                                                   |
+| `namespace_id`  | `BIGINT UNSIGNED NOT NULL`                                                 | `fk_entries_namespace` → `namespaces(id)` `ON DELETE CASCADE`. |
+| `entry_name`    | `VARCHAR(128) NOT NULL`                                                    | `UNIQUE uq_entries_namespace_name (namespace_id, entry_name)`. |
+| `value`         | `MEDIUMTEXT NOT NULL`                                                      |                                                                |
+| `description`   | `VARCHAR(1000) NULL`                                                       | Added by migration 002.                                        |
+| `env_dependent` | `BOOLEAN NOT NULL DEFAULT FALSE`                                           | Stored as `TINYINT(1)`; added by migration 003.                |
+| `created_at`    | `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`                             |                                                                |
+| `updated_at`    | `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Exposed as `modified_at`.                                      |
+
+There are no secondary indexes beyond the primary keys, the two unique keys and
+the foreign key; name filters are substring matches and do not use an index.
+The API serializes timestamps as ISO 8601 UTC strings (`toISOString()`).
+
+### Migration Runner
+
+`apps/api/scripts/migrate.mjs` (`pnpm --filter @okvns/api run migrate`):
+
+- Reads `OKVNS_MYSQL_HOST`, `OKVNS_MYSQL_DATABASE` and `OKVNS_MYSQL_USER`
+  (required; a missing one exits 1), `OKVNS_MYSQL_PORT` (default 3306) and
+  `OKVNS_MYSQL_PASSWORD` (default empty).
+- Creates `schema_migrations(filename VARCHAR(255) PRIMARY KEY, applied_at
+TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)` if missing.
+- Applies every `migrations/*.sql` file **in filename order** (`NNN_description.sql`),
+  skipping filenames already recorded, and records each filename after its SQL
+  succeeds. There is no wrapping transaction (MySQL DDL auto-commits).
+- Migrations must be idempotent: `001` uses `CREATE TABLE IF NOT EXISTS`; `002`
+  and `003` check `information_schema.COLUMNS` before running `ALTER TABLE`.
+- On failure it logs `[migrate] failed: <message>`, exits 1 and stops without
+  recording the failed file; a rerun retries it.
+- It prints `already up to date` or `applied N migration(s)`.
+- It takes no advisory lock, so concurrent runs (for example several pods'
+  init containers starting together) rely on migration idempotency.
+
 ## Layer Responsibilities
 
 | Layer          | Responsibility                                                                    |
@@ -95,3 +148,35 @@ The admin frontend reads:
 | Dev/prod parity     | Docker Compose and Kubernetes keep boundaries explicit.                       |
 | Logs                | Logs are emitted to stdout and stderr.                                        |
 | Admin processes     | Administrative tasks should run as explicit one-off commands when introduced. |
+
+## Package Manifest Checklist
+
+Use this when creating or recreating a workspace package or app.
+
+- **Versions**: `pnpm-lock.yaml` is the source of truth for exact dependency
+  versions; `package.json` files carry caret ranges and internal dependencies use
+  `workspace:*`. CI and Docker install with `--frozen-lockfile`.
+- **Workspace**: `pnpm-workspace.yaml` includes `apps/*` and `packages/*`. The
+  root `tsconfig.json` is a solution file with `references` to every package and
+  app; `tsconfig.base.json` sets `strict`, `ES2022`, `ESNext`/`Bundler`
+  modules and `isolatedModules`.
+- **ESM packages** (`shared`, `domain`, `application`, `yaml`, `okvns-wrapper`):
+  `"private": true`, `"type": "module"`, `main`/`types` at `./dist`, and an
+  `exports["."]` map with `types`, `import` **and `require`** all pointing at
+  `./dist/index.js`. The `require` condition is what lets the CommonJS API load
+  them through Node 22's `require(ESM)`; never remove it.
+- **Scripts** every package exposes: `build` (`tsc -p tsconfig.json`),
+  `typecheck` (`tsc --noEmit`), `lint` (`eslint src`), `test` (`vitest run`),
+  `test:coverage` (`vitest run --coverage`). The root delegates with `pnpm -r`.
+- **`apps/api`** is CommonJS: `tsconfig.json` uses `module: CommonJS`,
+  `moduleResolution: Node`, `experimentalDecorators` and `emitDecoratorMetadata`,
+  and a separate `tsconfig.build.json` for the build. Tests use Vitest with
+  `unplugin-swc` and `test/setup.ts`, which imports `reflect-metadata` and
+  defaults `OKVNS_STORAGE_DRIVER` to `memory`.
+- **Coverage**: `domain`, `application` and `yaml` use `@vitest/coverage-v8`
+  with 100% thresholds for lines, functions, branches and statements in their
+  `vitest.config.ts`, excluding `*.test.ts`, `index.ts` and `src/testing/**`.
+- **`apps/admin-web`** tests run in jsdom with `src/test/setup.ts` importing
+  `@testing-library/jest-dom/vitest`; `build:e2e` builds with `--mode e2e`.
+- **Git hooks**: Husky runs `lint-staged` (Prettier for `json/css/md`, Prettier
+  and ESLint for `js/jsx/ts/tsx`) on commit.

@@ -51,3 +51,18 @@ Project documentation SHALL tell developers where to find the generated Swagger 
 #### Scenario: Developer finds generated API docs
 - **WHEN** a developer reads the project API documentation
 - **THEN** it identifies the Swagger UI endpoint and raw OpenAPI document endpoint
+
+### Requirement: Documented error codes and success responses
+The Markdown API reference (`docs/api-and-yaml.md`) SHALL list every error code with its HTTP status and meaning, describe the `details` array, and state the success status and body of every route.
+
+#### Scenario: Error code table is complete
+- **WHEN** a reader consults the error codes section
+- **THEN** it lists `VALIDATION_ERROR`, `INVALID_YAML`, `NAMESPACE_NOT_FOUND`, `ENTRY_NOT_FOUND`, `DUPLICATE_NAMESPACE`, `DUPLICATE_ENTRY`, and `INTERNAL_ERROR` with the statuses defined by `STATUS_BY_CODE`
+
+#### Scenario: Framework errors are explained
+- **WHEN** a reader looks up unknown routes, oversized uploads, or a failed readiness check
+- **THEN** the reference states which code and status each one returns
+
+#### Scenario: Success responses are specified
+- **WHEN** a reader consults the success responses section
+- **THEN** it gives the status (201 for creations and import, 204 without body for deletions, 200 otherwise), example namespace and entry payloads, the ISO 8601 UTC timestamp format, and the `/health` and `/ready` bodies

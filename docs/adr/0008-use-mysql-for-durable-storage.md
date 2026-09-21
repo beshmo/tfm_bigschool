@@ -16,7 +16,7 @@ Use **MySQL** as the default durable source of truth for namespaces and entries.
 
 - Access MySQL through the **`mysql2`** promise client with a shared connection pool. No ORM is introduced, keeping persistence types (`mysql2` rows, pools, connections) confined to the `apps/api` infrastructure layer.
 - Manage schema with **plain SQL migration files** applied by a small in-repo runner (`apps/api/scripts/migrate.mjs`), tracked in a `schema_migrations` table so runs are idempotent.
-- Model data relationally: a `namespaces` table (stable id, unique name, timestamps) and an `entries` table (stable id, `namespace_id` foreign key, entry name, value, timestamps) with a unique `(namespace_id, entry_name)` and `ON DELETE CASCADE`.
+- Model data relationally (full column-level schema and runner contract: [Architecture](../architecture.md#mysql-schema)): a `namespaces` table (stable id, unique name, timestamps) and an `entries` table (stable id, `namespace_id` foreign key, entry name, value, timestamps) with a unique `(namespace_id, entry_name)` and `ON DELETE CASCADE`.
 - Extend the application `NamespaceRepository` port with insert-based `create`, atomic `rename`, and atomic `importNamespaces` so multi-step mutations run inside a single MySQL transaction.
 - Keep an in-memory adapter (`OKVNS_STORAGE_DRIVER=memory`) as a non-durable profile for fast local demos and tests; MySQL is the documented default runtime.
 - Make readiness depend on MySQL connectivity and required schema availability.

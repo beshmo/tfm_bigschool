@@ -58,3 +58,15 @@ The project SHALL provide repeatable MySQL schema setup and forward migrations f
 #### Scenario: Readiness requires schema availability
 - **WHEN** the API can connect to MySQL but the required schema is unavailable
 - **THEN** the readiness endpoint reports that the API is not ready to serve traffic
+
+### Requirement: Documented schema and migration contract
+The MySQL schema and the migration runner behavior SHALL be documented in `docs/architecture.md` with column types, collation, constraints, and runner semantics.
+
+#### Scenario: Schema details are documented
+- **WHEN** a reader consults the storage documentation
+- **THEN** it states the `utf8mb4_bin` collation, column names, types and lengths, the `updated_at` to `modified_at` mapping, the unique keys, the cascade rule, and the `schema_migrations` columns
+
+#### Scenario: Runner semantics are documented
+- **WHEN** a reader consults the migration runner documentation
+- **THEN** it states filename ordering, skipping of recorded migrations, stop-on-failure with retry on the next run, idempotency expectations, and the absence of a concurrency lock
+
