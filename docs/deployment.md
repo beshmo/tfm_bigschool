@@ -172,6 +172,43 @@ Schema is managed with plain SQL files under `apps/api/migrations/`, applied by
 Migrations are idempotent and tracked in a `schema_migrations` table, so
 re-running is safe.
 
+## Container Images
+
+Both Dockerfiles use the **repository root as build context**
+(`docker build -f apps/<app>/Dockerfile .`), install with
+`pnpm install --frozen-lockfile --ignore-scripts` (the lockfile is the source of
+truth for dependency versions), and use two stages: `build` and `runtime`.
+Corepack is installed explicitly (`corepack@0.35.0`) because Node 26 no longer
+bundles it.
+
+| Image       | Build stage                                                                                         | Runtime stage                                                                           | Port | User    |
+| ----------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---- | ------- |
+| `api`       | `node:26-alpine`; builds shared, domain, yaml, application, api in order; `pnpm deploy --prod /app` | `node:26-alpine`, `NODE_ENV=production`, `OKVNS_API_PORT=3000`, `CMD node dist/main.js` | 3000 | `node`  |
+| `admin-web` | `node:26-alpine`; builds shared, admin-web                                                          | `nginx:1.31-alpine` serving `dist` on `/usr/share/nginx/html`                           | 8080 | `nginx` |
+| `demo-web`  | same pattern as admin-web (adds the wrapper package)                                                | `nginx:1.31-alpine`                                                                     | 8080 | `nginx` |
+
+Static assets are root-owned and read-only; only `env.js` is writable by the
+`nginx` user.
+
+### Runtime configuration of the web images
+
+The SPA cannot read container environment variables directly, so:
+
+1. `public/env.js` ships as a placeholder that sets
+   `window.__OKVNS_API_BASE_URL__ = ''` (empty means "use the build-time URL").
+2. The image copies `docker-entrypoint.sh` to
+   `/docker-entrypoint.d/40-okvns-env.sh`; the stock nginx entrypoint runs it
+   before starting nginx. It rewrites `env.js` with
+   `window.__OKVNS_API_BASE_URL__ = "${OKVNS_API_BASE_URL}"`, defaulting to
+   `http://localhost:3000` (also the image's `ENV` default).
+3. `nginx.conf` listens on 8080, serves `env.js` with `Cache-Control: no-store`
+   so a restart with a new value takes effect, and falls back to `index.html`
+   for client-side routes (`try_files $uri /index.html`).
+
+The demo stack (`docker-compose.demo.yml`) runs MySQL (3307), the API (3001),
+admin-web (8082) and demo-web (8083); see `apps/demo-web/README.md`. Demo-web
+images are not part of production publishing.
+
 ## Deployment Constraints
 
 - Preserve the MySQL volume/PVC (or managed database) to keep data across restarts.

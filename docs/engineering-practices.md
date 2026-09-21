@@ -126,3 +126,30 @@ migrations before startup and uses the default local MySQL credentials
 (`okvns`/`okvns` on `127.0.0.1:3306`).
 
 Coverage output is written to package or app `coverage/` directories, which are gitignored.
+
+## CI and Supporting Configuration
+
+These files are not code, but they must stay consistent with it:
+
+- **`.github/workflows/ci.yml`** runs on pushes to `main`, `v*` tags and pull
+  requests, with pnpm 11.9.0 and Node 22 and `pnpm install --frozen-lockfile`.
+  Jobs: `quality` (lint, typecheck, build, test); `e2e` (needs `quality`;
+  MySQL service container with `okvns`/`okvns`, Playwright, uploads the report);
+  `Docker Images` (needs `quality`; builds with Buildx and only logs in and
+  pushes to Docker Hub on push events, not on pull requests). Actions are pinned
+  by commit SHA.
+- **`.github/dependabot.yml`** opens weekly PRs on Mondays (Europe/Madrid):
+  npm at 08:00 (grouped minor/patch for production and development
+  dependencies, **all semver-major bumps ignored** so they are done deliberately),
+  GitHub Actions at 08:30 (one group), and each Dockerfile directory at 09:00
+  (one group per image). Use `/process-dependabot-prs` to triage them.
+- **SonarQube/SonarCloud** has no configuration file or CI step in this
+  repository; it analyzes through the Sonar service integration. The
+  `/process-dependabot-prs` command treats its quality gate as a merge
+  requirement. Sonar rule ids may appear in comments (for example `S6504` in the
+  Dockerfiles).
+- **Local MySQL credentials**: Compose creates `okvns`/`okvns` (root password
+  `root`, database `okvns`, plus `okvns_test` for integration tests). The API
+  itself has no password default beyond empty (`OKVNS_MYSQL_PASSWORD`), so local
+  runs and E2E must supply `okvns` explicitly or via the Playwright config. These
+  values are for local development and CI only.
