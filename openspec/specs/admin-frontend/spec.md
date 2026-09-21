@@ -165,7 +165,7 @@ The project SHALL include Playwright workflows for namespace CRUD, entry CRUD, Y
 - **THEN** it verifies API-backed namespace and entry page size, ordering, and filtering controls through the browser UI
 
 ### Requirement: Admin UI structure inventory
-The admin frontend SHALL keep the structure below so the UI can be rebuilt from this spec. Visual tokens are owned by `apps/admin-web/src/styles.css` (the vendored Industry design system) and are not duplicated here: every color, font, spacing, radius and shadow comes from a `--color-*`, `--font-*` (`--font-heading`, `--font-body`, `--font-heading-weight`), `--space-*` (1, 2, 3, 4, 6, 8), `--radius-*` (sm, md, lg) or `--shadow-*` (sm, md, lg) variable.
+The admin frontend SHALL keep the structure below so the UI can be rebuilt from this spec. Visual tokens are owned by `apps/admin-web/src/styles.css` (the vendored Industry design system) and are vendored for reference in `docs/design-tokens.css` (guarded against drift by a test) and explained in `docs/design-system.md`: every color, font, spacing, radius and shadow comes from a `--color-*`, `--font-*` (`--font-heading`, `--font-body`, `--font-heading-weight`), `--space-*` (1, 2, 3, 4, 6, 8), `--radius-*` (sm, md, lg) or `--shadow-*` (sm, md, lg) variable.
 
 #### Scenario: Routes and shell
 - **WHEN** the app renders
