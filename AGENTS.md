@@ -30,7 +30,7 @@ TFM project for OKVNS: organized UTF-8 key-value entries inside namespaces.
 - Namespace and entry data is durable and survives API restarts; readiness depends on MySQL connectivity and schema availability.
 - YAML import supports canonical `namespaces: [...]` and accepts the original single `namespace: ...` shape; export emits raw YAML using canonical `namespaces: [...]`.
 - YAML import validates the full document before mutating state, rejects unexpected keys, duplicate namespaces, duplicate entries, invalid names, non-string values, and oversized payloads.
-- Valid imports upsert by namespace name: create missing namespaces and replace entries for existing imported namespaces.
+- Valid imports upsert by namespace name: create missing namespaces and replace entries and description for existing imported namespaces.
 
 ## Verification Notes
 

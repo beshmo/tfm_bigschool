@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { REQUEST_BODY_MAX_BYTES } from '@okvns/shared';
+import { ENTRY_VALUE_MAX_LENGTH, REQUEST_BODY_MAX_BYTES } from '@okvns/shared';
 import { createTestApp } from '../test/create-test-app';
 
 let app: INestApplication;
@@ -554,6 +554,32 @@ describe('Entry endpoints', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it('POST rejects an entry value over the limit with a safe 400', async () => {
+    const res = await http
+      .post('/namespaces/users/entries')
+      .send({ name: 'admin', value: 'x'.repeat(65_537) });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect((await http.get('/namespaces/users/entries')).body.items).toEqual([]);
+  });
+
+  it('PUT rejects an entry value over the limit and keeps the stored value', async () => {
+    await http.post('/namespaces/users/entries').send({ name: 'admin', value: 'kept' });
+    const res = await http
+      .put('/namespaces/users/entries/admin')
+      .send({ value: 'x'.repeat(65_537) });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect((await http.get('/namespaces/users/entries/admin')).body.value).toBe('kept');
+  });
+
+  it('GET entries rejects an unknown query parameter', async () => {
+    const res = await http.get('/namespaces/users/entries').query({ bogus: '1' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details).toContain('property bogus should not exist');
+  });
+
   it('GET lists entries with descriptions when stored', async () => {
     await http
       .post('/namespaces/users/entries')
@@ -739,6 +765,39 @@ describe('YAML endpoints', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
     expect(res.body.error).not.toHaveProperty('stack');
     expect((await http.get('/namespaces')).body.items).toEqual([]);
+  });
+
+  it('POST /yaml/import rejects a file uploaded under the wrong field name with 400', async () => {
+    const res = await http
+      .post('/yaml/import')
+      .attach('upload', Buffer.from('namespaces: []', 'utf8'), {
+        filename: 'import.yaml',
+        contentType: 'application/x-yaml',
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error).not.toHaveProperty('stack');
+    expect((await http.get('/namespaces')).body.items).toEqual([]);
+  });
+
+  it('POST /yaml/import rejects an oversized JSON body with a safe 413', async () => {
+    const res = await http
+      .post('/yaml/import')
+      .send({ yaml: 'a'.repeat(REQUEST_BODY_MAX_BYTES + 1024) });
+    expect(res.status).toBe(413);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error).not.toHaveProperty('stack');
+    expect((await http.get('/namespaces')).body.items).toEqual([]);
+  });
+
+  it('POST /namespaces rejects a malformed JSON body with a safe 400', async () => {
+    const res = await http
+      .post('/namespaces')
+      .set('Content-Type', 'application/json')
+      .send('{"name": ');
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error).not.toHaveProperty('stack');
   });
 
   it('POST /yaml/import returns 400 for invalid uploaded YAML', async () => {
@@ -980,6 +1039,17 @@ describe('OpenAPI document', () => {
     expect(schemas.YamlImportResponse.properties.namespaces.items.$ref).toContain(
       'NamespaceResponse',
     );
+  });
+
+  it('documents the entry value with the 65,536 code unit limit', async () => {
+    const { body } = await http.get('/docs-json');
+    const schemas = body.components.schemas;
+
+    for (const schema of ['EntryResponse', 'CreateEntryDto', 'UpdateEntryDto']) {
+      expect(schemas[schema].properties.value.type).toBe('string');
+      expect(schemas[schema].properties.value.maxLength).toBe(ENTRY_VALUE_MAX_LENGTH);
+    }
+    expect(ENTRY_VALUE_MAX_LENGTH).toBe(65_536);
   });
 
   it('documents the entry env_dependent field as a required boolean response and optional request', async () => {

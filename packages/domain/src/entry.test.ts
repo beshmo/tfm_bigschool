@@ -46,6 +46,16 @@ describe('Entry', () => {
     expect(() => Entry.create('k', 'x'.repeat(65_537))).toThrow(InvalidEntryValueError);
   });
 
+  it('GIVEN a value of exactly the max length WHEN created THEN it is accepted', () => {
+    expect(Entry.create('k', 'x'.repeat(65_536)).value).toHaveLength(65_536);
+  });
+
+  it('GIVEN astral characters WHEN measured THEN the limit counts UTF-16 code units, not bytes', () => {
+    // Each emoji is 2 UTF-16 code units (and 4 UTF-8 bytes).
+    expect(Entry.create('k', '😀'.repeat(32_768)).value).toHaveLength(65_536);
+    expect(() => Entry.create('k', '😀'.repeat(32_769))).toThrow(InvalidEntryValueError);
+  });
+
   it('GIVEN an entry WHEN withValue is called THEN a new entry keeps the name and creation time but refreshes modification', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));

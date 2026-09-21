@@ -288,6 +288,22 @@ describe.skipIf(!mysqlTestAvailable)('MysqlNamespaceRepository (integration)', (
     expect(stored?.getEntry('admin').description).toBe('entry doc');
   });
 
+  it('GIVEN an existing namespace with a description WHEN imported with another THEN it is replaced', async () => {
+    await repository.create(Namespace.create('users', 'old description'));
+
+    await repository.importNamespaces([Namespace.create('users', 'new description')]);
+
+    expect((await repository.findByName('users'))?.description).toBe('new description');
+  });
+
+  it('GIVEN an existing namespace with a description WHEN imported without one THEN it is cleared', async () => {
+    await repository.create(Namespace.create('users', 'old description'));
+
+    await repository.importNamespaces([Namespace.create('users')]);
+
+    expect((await repository.findByName('users'))?.description).toBeUndefined();
+  });
+
   it('GIVEN env_dependent entries WHEN created THEN the flags survive a repository restart', async () => {
     const seed = Namespace.create('users');
     seed.setEntries([

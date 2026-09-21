@@ -64,6 +64,10 @@ on `error.kind` (or `instanceof`) instead of parsing messages:
 | `OkvnsInvalidResponseError`    | `invalid-response`    | A success response had no string `value` or was unreadable. |
 | `OkvnsUnexpectedResponseError` | `unexpected-response` | Any other unexpected error response (carries `status`).     |
 
+Errors built from an API error response also expose the API's error `code`
+(`string | undefined`); `OkvnsValidationError` additionally exposes `details`
+(`string[] | undefined`). Both are `undefined` when the API did not supply them.
+
 ```ts
 import { OkvnsWrapperError, OkvnsNetworkError } from '@okvns/wrapper';
 

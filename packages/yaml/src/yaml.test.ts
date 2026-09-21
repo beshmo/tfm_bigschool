@@ -242,6 +242,13 @@ describe('parseNamespacesYaml', () => {
     expect(parseNamespacesYaml(yaml)).toEqual([{ name: 'users', entries: [] }]);
   });
 
+  it('GIVEN an entries value that is not an array WHEN parsed THEN it throws INVALID_YAML', () => {
+    const yaml = `namespaces:
+  - name: users
+    entries: nope`;
+    expectCode(() => parseNamespacesYaml(yaml), ERROR_CODES.INVALID_YAML);
+  });
+
   it('GIVEN a non-string namespace description WHEN parsed THEN it throws INVALID_YAML', () => {
     const yaml = `namespaces:
   - name: users

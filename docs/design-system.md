@@ -20,7 +20,7 @@ corners (`border-radius: 0`), a 1px `--color-divider` hairline border, no
 surface fill, and four `+` registration marks that sit 6px outside each corner.
 
 ```tsx
-<div className="card blueprint">
+<div className="panel blueprint">
   <Corners /> {/* renders <i class="corner tl|tr|bl|br" /> — see components/Blueprint.tsx */}
   …content…
 </div>
@@ -29,6 +29,6 @@ surface fill, and four `+` registration marks that sit 6px outside each corner.
 `.blueprint` needs `position: relative`; the corner children are 11×11px
 crosses drawn with `::before`/`::after` in 55% `--color-text`. Never drop the
 marks from a framed element, and never round or surface-fill a card. The
-component classes (`.btn`, `.input`, `.field`, `.card`, `.table`, `.tag`,
+component classes (`.btn`, `.input`, `.field`, `.panel`, `.table`, `.tag`,
 `.dialog`, `.nav`) live in the rest of `styles.css`. Icons are Lucide at
 stroke-width 1.5 (`components/Icon.tsx`).

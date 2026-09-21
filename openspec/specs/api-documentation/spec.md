@@ -66,3 +66,10 @@ The Markdown API reference (`docs/api-and-yaml.md`) SHALL list every error code 
 #### Scenario: Success responses are specified
 - **WHEN** a reader consults the success responses section
 - **THEN** it gives the status (201 for creations and import, 204 without body for deletions, 200 otherwise), example namespace and entry payloads, the ISO 8601 UTC timestamp format, and the `/health` and `/ready` bodies
+
+### Requirement: Schema and parameter names are not contractual
+The OpenAPI document SHALL describe every documented request, response and path parameter, but the names of generated schemas (for example `NamespaceInputDto`) and of path placeholders (for example `{namespace}`) are implementation details. Consumers SHALL NOT depend on them, and renaming them is not a breaking change.
+
+#### Scenario: Content is documented regardless of names
+- **WHEN** a client reads the OpenAPI document
+- **THEN** every route documents its parameters, request body and responses without requiring particular schema or placeholder names

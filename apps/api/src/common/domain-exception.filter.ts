@@ -38,12 +38,48 @@ export class DomainExceptionFilter implements ExceptionFilter {
       return;
     }
 
+    const clientStatus = clientErrorStatus(exception);
+    if (clientStatus !== undefined) {
+      response
+        .status(clientStatus)
+        .json(buildApiError(codeForStatus(clientStatus), CLIENT_ERROR_MESSAGES[clientStatus]));
+      return;
+    }
+
     this.logger.error(
       'Unhandled error',
       exception instanceof Error ? exception.stack : String(exception),
     );
     response.status(500).json(buildApiError(ERROR_CODES.INTERNAL, 'An unexpected error occurred.'));
   }
+}
+
+const CLIENT_ERROR_MESSAGES: Record<number, string> = {
+  400: 'The request could not be processed.',
+  413: 'Request body exceeds the size limit.',
+};
+
+/**
+ * Maps request-parsing failures raised outside Nest (multer for uploads,
+ * body-parser for JSON bodies) to a client status. Matches on the error's
+ * identity and machine-readable fields, never on message text, which changes
+ * between library versions.
+ */
+function clientErrorStatus(exception: unknown): number | undefined {
+  if (typeof exception !== 'object' || exception === null) {
+    return undefined;
+  }
+  const error = exception as { name?: unknown; code?: unknown; type?: unknown };
+  if (error.name === 'MulterError') {
+    return error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+  }
+  if (error.type === 'entity.too.large') {
+    return 413;
+  }
+  if (error.type === 'entity.parse.failed') {
+    return 400;
+  }
+  return undefined;
 }
 
 function extractHttpDetails(exception: HttpException): { message: string; details?: string[] } {

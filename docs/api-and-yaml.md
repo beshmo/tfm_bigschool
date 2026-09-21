@@ -10,7 +10,11 @@ built from the NestJS controllers:
   contract for client generation and tooling.
 
 The generated document reflects the implemented routes, request/response
-schemas, path parameters, multipart YAML upload, and the safe error shape. This
+schemas, path parameters, multipart YAML upload, and the safe error shape. The
+_names_ of generated schemas (for example `NamespaceInputDto`) and of path
+placeholders (for example `{namespace}`) are implementation details and may
+change without notice; clients generated from the document should not depend on
+them. This
 Markdown reference remains the source of truth for YAML semantics, error codes,
 and migration notes described below.
 
@@ -67,7 +71,9 @@ return one page of results plus metadata describing the full result set:
 | `name`          | both       | Case-insensitive "contains" filter on the name       | none    |
 | `env_dependent` | entries    | `true` or `false`; omit to return all entries        | none    |
 
-Page sizes, sort fields, and directions are **allowlisted**: any other value is
+Query parameters other than the ones above are rejected with 400
+`VALIDATION_ERROR` and the detail `property <name> should not exist`. Page
+sizes, sort fields, and directions are **allowlisted**: any other value is
 rejected with a `VALIDATION_ERROR` before the list query runs. `page_size=25` and
 `sort=value` are errors, not silently-clamped or ignored inputs.
 
@@ -105,6 +111,14 @@ Namespace and entry names must be trimmed, non-empty UTF-8 strings matching:
 ```
 
 Names are limited to 128 characters after trimming.
+
+## Entry values
+
+An entry `value` is a UTF-8 string of at most **65,536 characters**, measured as
+the JavaScript string length (UTF-16 code units), not bytes: an emoji counts as 2.
+The empty string is allowed. The limit (`ENTRY_VALUE_MAX_LENGTH` in
+`packages/shared`) applies identically to the API, YAML import, and the domain,
+and is published as `maxLength` in the OpenAPI document.
 
 ## Descriptions
 
@@ -178,7 +192,11 @@ while keeping the original HTTP status. In particular:
 
 - an unknown route responds 404 with code `VALIDATION_ERROR` (not a
   `*_NOT_FOUND` code);
-- an oversized import upload responds 413 with code `VALIDATION_ERROR`;
+- an import request larger than 1 MiB responds 413 with code `VALIDATION_ERROR`,
+  whether it is a JSON body or a multipart upload;
+- a multipart upload whose file is not in the `file` field responds 400 with code
+  `VALIDATION_ERROR`;
+- a malformed JSON body responds 400 with code `VALIDATION_ERROR`;
 - a failed readiness check responds 503 with code `INTERNAL_ERROR` and the
   message `Not ready: storage is unavailable.`;
 - an unhandled exception responds 500 with the generic message
@@ -193,8 +211,11 @@ message `Request validation failed.` with one string per violated rule;
 
 ## Success Responses
 
-All timestamps (`created_at`, `modified_at`) are ISO 8601 UTC strings with
-millisecond precision, for example `2026-09-21T10:00:00.000Z`. A namespace's
+All timestamps (`created_at`, `modified_at`) are ISO 8601 UTC strings, for
+example `2026-09-21T10:00:00.000Z`. **Sub-second precision is not guaranteed**:
+MySQL `TIMESTAMP` columns store whole seconds, so the default runtime always
+returns `.000Z`, while the in-memory driver may return milliseconds. Do not rely
+on sub-second ordering; list sorting breaks ties by name. A namespace's
 `modified_at` also advances when any of its entries changes.
 
 | Route                                        | Status | Body                                       |
@@ -265,14 +286,18 @@ storage.
 Only these keys are allowed:
 
 - Root: `namespaces` or `namespace`, but not both
-- Namespace object: `name`, `entries`, optional `description`
+- Namespace object: `name`, optional `entries` (defaults to `[]`), optional `description`
 - Entry object: `name`, `value`, optional `description`, optional `env_dependent`
 
 Imported descriptions and `env_dependent` markers are user-authored data and are
 persisted (unlike `created_at`/`modified_at`, which are accepted but ignored).
 They follow the same rules as the API: descriptions are strings of at most 1000
 characters with blanks normalized to no description, and `env_dependent` must be
-a boolean, defaulting to `false` when omitted.
+a boolean, defaulting to `false` when omitted. A key written with no value
+(`description:` or `env_dependent:`, which YAML parses as `null`) counts as
+omitted: no description, and `false`. `entries`, when present, must be an array.
+Entry values are limited to 65,536 characters (see
+[Entry values](#entry-values)).
 
 The importer rejects:
 
@@ -286,7 +311,9 @@ The importer rejects:
 - Oversized payloads
 - Invalid YAML or invalid OKVNS shapes
 
-Import validates the full document before mutating storage. Valid imports upsert by namespace name: imported namespaces are created when missing and replace entries when already present.
+Import validates the full document before mutating storage. Valid imports upsert by namespace name: imported namespaces are created when missing and replace both entries and
+description when already present. An imported namespace without a description
+clears the existing one.
 
 ## Canonical YAML Example
 
