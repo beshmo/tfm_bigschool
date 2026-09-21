@@ -29,6 +29,59 @@ in-memory adapter (`OKVNS_STORAGE_DRIVER=memory`) is retained for fast local
 demos and tests. There is still no authentication, authorization, Redis, queue,
 or filesystem-backed persistence.
 
+### MySQL Schema
+
+Defined by the plain-SQL files in `apps/api/migrations/`. Both tables are
+`ENGINE=InnoDB`, `DEFAULT CHARSET=utf8mb4`, `COLLATE=utf8mb4_bin`, so name
+uniqueness is enforced **case- and accent-sensitively** by the database itself.
+
+`namespaces`
+
+| Column        | Type                                                                       | Notes                        |
+| ------------- | -------------------------------------------------------------------------- | ---------------------------- |
+| `id`          | `BIGINT UNSIGNED AUTO_INCREMENT`                                           | Primary key.                 |
+| `name`        | `VARCHAR(128) NOT NULL`                                                    | `UNIQUE uq_namespaces_name`. |
+| `description` | `VARCHAR(1000) NULL`                                                       | Added by migration 002.      |
+| `created_at`  | `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`                             |                              |
+| `updated_at`  | `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Exposed as `modified_at`.    |
+
+`entries`
+
+| Column          | Type                                                                       | Notes                                                          |
+| --------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `id`            | `BIGINT UNSIGNED AUTO_INCREMENT`                                           | Primary key.                                                   |
+| `namespace_id`  | `BIGINT UNSIGNED NOT NULL`                                                 | `fk_entries_namespace` → `namespaces(id)` `ON DELETE CASCADE`. |
+| `entry_name`    | `VARCHAR(128) NOT NULL`                                                    | `UNIQUE uq_entries_namespace_name (namespace_id, entry_name)`. |
+| `value`         | `MEDIUMTEXT NOT NULL`                                                      |                                                                |
+| `description`   | `VARCHAR(1000) NULL`                                                       | Added by migration 002.                                        |
+| `env_dependent` | `BOOLEAN NOT NULL DEFAULT FALSE`                                           | Stored as `TINYINT(1)`; added by migration 003.                |
+| `created_at`    | `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`                             |                                                                |
+| `updated_at`    | `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Exposed as `modified_at`.                                      |
+
+There are no secondary indexes beyond the primary keys, the two unique keys and
+the foreign key; name filters are substring matches and do not use an index.
+The API serializes timestamps as ISO 8601 UTC strings (`toISOString()`).
+
+### Migration Runner
+
+`apps/api/scripts/migrate.mjs` (`pnpm --filter @okvns/api run migrate`):
+
+- Reads `OKVNS_MYSQL_HOST`, `OKVNS_MYSQL_DATABASE` and `OKVNS_MYSQL_USER`
+  (required; a missing one exits 1), `OKVNS_MYSQL_PORT` (default 3306) and
+  `OKVNS_MYSQL_PASSWORD` (default empty).
+- Creates `schema_migrations(filename VARCHAR(255) PRIMARY KEY, applied_at
+TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)` if missing.
+- Applies every `migrations/*.sql` file **in filename order** (`NNN_description.sql`),
+  skipping filenames already recorded, and records each filename after its SQL
+  succeeds. There is no wrapping transaction (MySQL DDL auto-commits).
+- Migrations must be idempotent: `001` uses `CREATE TABLE IF NOT EXISTS`; `002`
+  and `003` check `information_schema.COLUMNS` before running `ALTER TABLE`.
+- On failure it logs `[migrate] failed: <message>`, exits 1 and stops without
+  recording the failed file; a rerun retries it.
+- It prints `already up to date` or `applied N migration(s)`.
+- It takes no advisory lock, so concurrent runs (for example several pods'
+  init containers starting together) rely on migration idempotency.
+
 ## Layer Responsibilities
 
 | Layer          | Responsibility                                                                    |
