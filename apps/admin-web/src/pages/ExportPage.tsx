@@ -21,7 +21,7 @@ const MAX_PAGE_SIZE = 100;
 async function fetchAllNamespaces(api: OkvnsApi): Promise<NamespaceListItemDto[]> {
   const collected: NamespaceListItemDto[] = [];
   let page = 1;
-  let totalPages = 1;
+  let totalPages: number;
   do {
     const result = await api.listNamespaces({ page, page_size: MAX_PAGE_SIZE, sort: 'name' });
     collected.push(...result.items);
