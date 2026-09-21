@@ -80,7 +80,7 @@ Import validates the **entire** document before mutating anything (atomic) and *
 
 ## Admin frontend design system
 
-`apps/admin-web/src/styles.css` vendors the **Industry** design system (the `Industry` Claude design project) — a steel-blue wireframe look. Its token sheet is the source of truth: take every color, font, spacing, radius and shadow from a `var(--color-*)` / `--font-*` / `--space-*` / `--radius-*` / `--shadow-*` variable, and never hard-code a hex, font name, or raw px the tokens already carry. Build with the system's classes (`.btn`, `.input`, `.field`, `.card`, `.table`, `.tag`, `.dialog`, `.nav`) rather than inventing parallel ones.
+`apps/admin-web/src/styles.css` vendors the **Industry** design system (the `Industry` Claude design project) — a steel-blue wireframe look. Its token sheet is the source of truth: take every color, font, spacing, radius and shadow from a `var(--color-*)` / `--font-*` / `--space-*` / `--radius-*` / `--shadow-*` variable, and never hard-code a hex, font name, or raw px the tokens already carry. Build with the system's classes (`.btn`, `.input`, `.field`, `.panel`, `.table`, `.tag`, `.dialog`, `.nav`) rather than inventing parallel ones.
 
 Cards, panels, figures and the primary button are _blueprint objects_: square-cornered, hairline-bordered, and wearing four `+` registration marks — the `.blueprint` class plus a `<Corners />` child. Never drop the marks from a framed element, and never round or surface-fill a card. Icons are Lucide at stroke-width 1.5, inlined in `components/Icon.tsx`.
 
