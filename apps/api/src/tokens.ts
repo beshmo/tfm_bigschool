@@ -1,0 +1,3 @@
+export const APP_CONFIG = Symbol('APP_CONFIG');
+export const NAMESPACE_REPOSITORY = Symbol('NAMESPACE_REPOSITORY');
+export const READINESS_INDICATOR = Symbol('READINESS_INDICATOR');
