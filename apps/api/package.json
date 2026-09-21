@@ -33,13 +33,13 @@
   "devDependencies": {
     "@nestjs/cli": "^10.4.5",
     "@nestjs/schematics": "^10.1.4",
-    "@nestjs/testing": "^11.2.3",
+    "@nestjs/testing": "^11.2.5",
     "@types/express": "^5.0.0",
     "@types/node": "^22.7.4",
     "@types/supertest": "^7.2.1",
     "supertest": "^7.0.0",
     "typescript": "^6.0.3",
-    "unplugin-swc": "^1.5.10",
+    "unplugin-swc": "^1.6.0",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.11"
   }
