@@ -23,7 +23,7 @@ export function setupOpenApi(app: INestApplication): void {
       'Organizes UTF-8 key-value entries inside named namespaces, with YAML ' +
         'import/export. See docs/api-and-yaml.md for YAML semantics and error codes.',
     )
-    .setVersion('1.0.1')
+    .setVersion('1.0.2')
     .addTag('health', 'Liveness and readiness probes')
     .addTag('namespaces', 'Namespace management')
     .addTag('entries', 'Key-value entries within a namespace')

@@ -20,7 +20,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: admin-web
-          image: beshmo/okvns:okvns-admin-web-1.0.1
+          image: beshmo/okvns:okvns-admin-web-1.0.2
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

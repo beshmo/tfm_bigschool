@@ -44,8 +44,8 @@ The manifests use the published Docker Hub images by default:
 
 | Workload  | Image                                |
 | --------- | ------------------------------------ |
-| API       | `beshmo/okvns:okvns-api-1.0.1`       |
-| Admin web | `beshmo/okvns:okvns-admin-web-1.0.1` |
+| API       | `beshmo/okvns:okvns-api-1.0.2`       |
+| Admin web | `beshmo/okvns:okvns-admin-web-1.0.2` |
 
 Apply manifests:
 
@@ -104,8 +104,8 @@ data; deleting the PVC does. The reference manifests set
 The Helm chart lives in `deploy/helm/okvns/` and renders the same reference
 deployment as the raw Kubernetes manifests. Default values use:
 
-- API image: `beshmo/okvns:okvns-api-1.0.1`
-- Admin web image: `beshmo/okvns:okvns-admin-web-1.0.1`
+- API image: `beshmo/okvns:okvns-api-1.0.2`
+- Admin web image: `beshmo/okvns:okvns-admin-web-1.0.2`
 - Namespace: `okvns`
 
 Render the chart locally:
@@ -136,8 +136,8 @@ file:
 
 ```bash
 helm upgrade --install okvns deploy/helm/okvns \
-  --set api.image.tag=okvns-api-1.0.1 \
-  --set adminWeb.image.tag=okvns-admin-web-1.0.1
+  --set api.image.tag=okvns-api-1.0.2 \
+  --set adminWeb.image.tag=okvns-admin-web-1.0.2
 ```
 
 The chart defaults MySQL persistence to the DigitalOcean Kubernetes block
