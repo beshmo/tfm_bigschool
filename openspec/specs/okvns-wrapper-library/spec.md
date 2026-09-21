@@ -62,3 +62,19 @@ The wrapper SHALL support an injected fetch-compatible implementation while defa
 #### Scenario: Missing fetch throws configuration error
 - **WHEN** an `OkvnsWrapper` is constructed without an injected fetch in a runtime that has no global fetch
 - **THEN** wrapper usage fails with a typed configuration error
+
+### Requirement: Public API surface
+The wrapper package SHALL export exactly these public names: the class `OkvnsWrapper`, the abstract base `OkvnsWrapperError`, its six subclasses, and the types `OkvnsWrapperOptions`, `FetchLike`, `FetchLikeResponse` and `OkvnsWrapperErrorKind`.
+
+#### Scenario: Constructor options
+- **WHEN** an application constructs `new OkvnsWrapper(options)`
+- **THEN** `options.baseUrl` is required (trailing slashes are normalized) and `options.fetch` optionally injects a `FetchLike`, defaulting to the global `fetch`
+
+#### Scenario: Error class hierarchy
+- **WHEN** `read` fails for a reason other than a missing namespace or entry
+- **THEN** it rejects with one of `OkvnsConfigurationError` (`configuration`), `OkvnsNetworkError` (`network`, carries `cause`), `OkvnsValidationError` (`validation`), `OkvnsServerError` (`server`, 5xx, carries `status`), `OkvnsInvalidResponseError` (`invalid-response`) or `OkvnsUnexpectedResponseError` (`unexpected-response`, carries `status`), each extending `OkvnsWrapperError` with a `kind` field
+
+#### Scenario: Wrapper README documents usage
+- **WHEN** a developer reads `packages/okvns-wrapper/README.md`
+- **THEN** it documents basic usage, fetch injection, the default-on-miss behavior and the error table
+

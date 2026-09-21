@@ -89,4 +89,4 @@ back cleanly.
 
 This first wrapper is intentionally narrow: **read only**. It does not add auth,
 retries, caching, batching, writes, or YAML import/export. See
-`openspec/changes/add-okvns-wrapper-library/` for the design rationale.
+`openspec/specs/okvns-wrapper-library/spec.md` (and the archived change `openspec/changes/archive/2026-07-13-add-okvns-wrapper-library/`) for the design rationale.

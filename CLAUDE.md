@@ -54,6 +54,8 @@ Layers, strictly one-directional (`shared` ← `domain` ← `application` → `y
 - `packages/yaml` — strict OKVNS YAML parser/serializer. Throws its own `YamlError` (carrying an `ERROR_CODES` code), not domain errors. 100% coverage.
 - `apps/api` — NestJS presentation + persistence adapters. `PersistenceModule` (`src/infrastructure/persistence.module.ts`) wires the `NAMESPACE_REPOSITORY` token and readiness indicator from `OKVNS_STORAGE_DRIVER` (MySQL adapter in `src/infrastructure/mysql/`, or the in-memory adapter). Use cases are wired in `app.module.ts` via `useCaseProvider(...)`. The `NamespaceRepository` port has transaction-oriented methods: `create` (insert, unique-constraint backed), atomic `rename`, and atomic `importNamespaces`.
 - `apps/admin-web` — React. **API request/response mapping is isolated** in `src/api/` (`HttpOkvnsApi` implements the `OkvnsApi` port); components consume it through `useApi()` context and never touch `fetch`/status codes directly.
+- `packages/okvns-wrapper` — read-only TypeScript client (`OkvnsWrapper.read(ns, entry, default)`) for external apps; not-found returns the default, other failures throw typed `OkvnsWrapperError` subclasses. See its spec and README.
+- `apps/demo-web` — one-page React demo that reads its copy from the `demo-consumer` namespace through the wrapper; runs in `docker-compose.demo.yml`. Spec: `openspec/specs/demo-web`.
 
 ### Error handling contract
 
