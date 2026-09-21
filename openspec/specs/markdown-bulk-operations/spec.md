@@ -1,6 +1,6 @@
 ## Purpose
 
-Bulk import and export of namespaces and entries via OKVNS YAML format. Supports dual-shape import (plural `namespaces` and single `namespace`) with strict schema validation, optional descriptions, entry environment-dependence metadata, atomic validation-before-mutation, deterministic ordering, and canonical export.
+Bulk import and export of namespaces and entries via OKVNS YAML format. (The capability name `markdown-bulk-operations` is historical: the contract was originally Markdown and is now YAML only; the directory keeps its name to preserve spec history.) Supports dual-shape import (plural `namespaces` and single `namespace`) with strict schema validation, optional descriptions, entry environment-dependence metadata, atomic validation-before-mutation, deterministic ordering, and canonical export.
 
 ## Requirements
 
