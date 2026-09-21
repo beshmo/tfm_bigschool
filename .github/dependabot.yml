@@ -21,10 +21,11 @@ updates:
           - 'minor'
           - 'patch'
     ignore:
-      # NestJS packages must be upgraded together across major versions
-      # (see apps/api/package.json). A single-package major bump (e.g.
-      # @nestjs/core alone) breaks apps/api at runtime/test time.
-      - dependency-name: '@nestjs/*'
+      # Major bumps routinely need hand-driven migration work (e.g. NestJS
+      # packages must move together across major versions, ESLint 9+ needs
+      # an eslint.config.* flat-config migration) that a dependency-bump PR
+      # can't carry on its own — defer all of them to a deliberate upgrade.
+      - dependency-name: '*'
         update-types:
           - 'version-update:semver-major'
 
