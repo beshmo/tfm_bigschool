@@ -163,3 +163,47 @@ The project SHALL include Playwright workflows for namespace CRUD, entry CRUD, Y
 #### Scenario: List controls workflow is exercised
 - **WHEN** the Playwright suite runs against the local app
 - **THEN** it verifies API-backed namespace and entry page size, ordering, and filtering controls through the browser UI
+
+### Requirement: Admin UI structure inventory
+The admin frontend SHALL keep the structure below so the UI can be rebuilt from this spec. Visual tokens are owned by `apps/admin-web/src/styles.css` (the vendored Industry design system) and are not duplicated here: every color, font, spacing, radius and shadow comes from a `--color-*`, `--font-*` (`--font-heading`, `--font-body`, `--font-heading-weight`), `--space-*` (1, 2, 3, 4, 6, 8), `--radius-*` (sm, md, lg) or `--shadow-*` (sm, md, lg) variable.
+
+#### Scenario: Routes and shell
+- **WHEN** the app renders
+- **THEN** a header nav shows the brand "OKVNS Admin" (`brackets` icon) and links **Namespaces** (`/`), **Import** (`/import`), **Export** (`/export`), with the active link marked `aria-current="page"`
+- **AND** the routes are `/` (NamespacesPage), `/namespaces/:name` (NamespaceDetailPage), `/import` (ImportPage), and `/export` (ExportPage)
+- **AND** a footer shows the brand and `v<version>` read from the admin package version at build time
+
+#### Scenario: List control defaults
+- **WHEN** a namespace or entry list first loads
+- **THEN** it requests page 1, page size 10 (choices 10, 50, 100), sorted by name ascending
+- **AND** namespaces offer the ordering fields Name, Created, Modified, and entries additionally offer Environment-dependent
+- **AND** the controls are labelled "Filter by name", "Order by", "Direction" (Ascending/Descending) and "Per page"
+- **AND** every control change immediately re-requests the list from the API, without debounce and without local filtering
+
+#### Scenario: Loading, empty and error states
+- **WHEN** a list is loading
+- **THEN** a skeleton with the real table headers and four placeholder rows is shown next to a "Loading…" status
+- **AND** an empty namespace list reads "No namespaces yet." with the hint "Create one above to get started.", or "No namespaces match the filter." when a name filter is active
+- **AND** failures render in an error banner beside the form that caused them, not as toasts
+
+#### Scenario: Toasts and dialogs
+- **WHEN** a write succeeds
+- **THEN** a corner toast (`checkCircle` icon) confirms it for 6 seconds unless dismissed, for example "Namespace created", "Namespace deleted", "Entry added", "Changes saved", "Import complete"
+- **AND** deleting a namespace or entry opens a `role="alertdialog"` titled "Delete namespace?" or "Delete entry?" with a "Delete" confirm button, which closes on Escape, focuses on open, and returns focus to its opener
+- **AND** deleting the last item on a page navigates to the previous page
+
+#### Scenario: Icons and timestamps
+- **WHEN** an icon is rendered
+- **THEN** it is one of the inlined Lucide icons at stroke-width 1.5 in `components/Icon.tsx`: `brackets`, `trash`, `pencil`, `chevronLeft`, `chevronRight`, `arrowLeft`, `alertTriangle`, `checkCircle`, `close`, `upload`, `download`, `copy`
+- **AND** timestamps render through `components/Timestamps.tsx`, pinned to `en-US`/UTC, with `<time dateTime>` holding the API's ISO instant
+
+#### Scenario: Page composition
+- **WHEN** the namespaces page renders
+- **THEN** it shows the "Namespaces" heading, a "Create namespace" form, list controls, the table, and pagination
+- **AND** the namespace detail page shows the namespace name, "Namespace settings" (rename and description), an "Add entry" form, and an "Entries" list with an entry edit dialog
+- **AND** the import page ("Import YAML") offers "Paste YAML" and "Import a file" sections plus an "Imported namespaces" result
+- **AND** the export page pages through all namespaces at page size 100 sorted by name to offer export of all or a single namespace
+
+#### Scenario: Runtime API base URL
+- **WHEN** the app resolves the API base URL
+- **THEN** it uses `window.__OKVNS_API_BASE_URL__` first, then `VITE_OKVNS_API_BASE_URL`, then `http://localhost:3000`

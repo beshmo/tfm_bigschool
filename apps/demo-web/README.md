@@ -51,11 +51,13 @@ The demo stack exposes:
 - Demo webapp: `http://localhost:8083`
 - MySQL: `localhost:3307`
 
-The demo webapp reads:
-
-- `demo.header`, default `demo webapp`
-- `demo.body_content_usecase`, where `1` shows use case #1 and any other value shows lorem ipsum
-- `demo.footer_copyright`, default `Copyright 2026 OKVNS demo.`
+The demo webapp reads the `header`, `tagline`, `use-case-mode`, `body-headline`,
+`body-content`, `banner-enabled`, `banner-message`, `warning-enabled`,
+`warning-title`, `warning-description`, `cta-label`, `support-endpoint` and
+`footer-copyright` entries of the `demo-consumer` namespace, falling back to the
+defaults in `src/demo-copy.ts` when an entry is missing. Import
+`docs/tfm/okvns-demo-use-cases.yaml` in the admin webapp to populate it. See
+`openspec/specs/demo-web/spec.md`.
 
 Stop the stack with:
 

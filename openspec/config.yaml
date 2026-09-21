@@ -1,20 +1,22 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context shown to AI when creating artifacts.
+context: |
+  OKVNS organizes UTF-8 key-value entries inside named namespaces, exposed by a
+  NestJS REST API and a React/Vite admin frontend. pnpm workspace with clean-architecture
+  layers: shared <- domain <- application -> yaml, apps as adapters (api, admin-web, demo-web).
+  Storage is durable MySQL by default (ADR-0008); an in-memory driver exists for demos and tests.
+  No auth, Redis or queues. Node >= 22, pnpm 11, TypeScript, Vitest, Playwright.
+  Conventions: BDD tests (GIVEN/WHEN/THEN) colocated with source, 100% coverage for
+  domain/application/yaml, safe error shape { error: { code, message, details? } },
+  conventional commits. See CLAUDE.md, AGENTS.md and docs/ for detail.
+  Note: the capability `markdown-bulk-operations` is the historical name of the YAML
+  import/export contract; it has no Markdown behavior.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+# Per-artifact rules
+rules:
+  specs:
+    - Write scenarios as WHEN/THEN and keep them testable; map new ones in docs/traceability.md
+    - Keep docs/api-and-yaml.md in sync when an API status, error code or response shape changes
+  tasks:
+    - Include the tests and the docs/spec updates needed for the change

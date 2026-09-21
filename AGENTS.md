@@ -11,7 +11,7 @@ TFM project for OKVNS: organized UTF-8 key-value entries inside namespaces.
 - Monorepo: `pnpm` workspace.
 - Backend: NestJS API in `apps/api`.
 - Frontend: React + Vite admin app in `apps/admin-web`.
-- Packages: `packages/domain`, `packages/application`, `packages/yaml`, `packages/shared`, `packages/okvns-wrapper`.
+- Packages: `packages/domain`, `packages/application`, `packages/yaml`, `packages/shared`, `packages/okvns-wrapper`. Apps: `apps/api`, `apps/admin-web`, `apps/demo-web` (demo consumer of `@okvns/wrapper`; not published to production).
 - Tests: Vitest for packages where practical, React Testing Library for frontend, Playwright for E2E, Nest-compatible HTTP contract tests for API.
 - Coverage: package-level `@vitest/coverage-v8`; domain and application target 100%.
 
