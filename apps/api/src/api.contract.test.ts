@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { REQUEST_BODY_MAX_BYTES } from '@okvns/shared';
+import { ENTRY_VALUE_MAX_LENGTH, REQUEST_BODY_MAX_BYTES } from '@okvns/shared';
 import { createTestApp } from '../test/create-test-app';
 
 let app: INestApplication;
@@ -1039,6 +1039,17 @@ describe('OpenAPI document', () => {
     expect(schemas.YamlImportResponse.properties.namespaces.items.$ref).toContain(
       'NamespaceResponse',
     );
+  });
+
+  it('documents the entry value with the 65,536 code unit limit', async () => {
+    const { body } = await http.get('/docs-json');
+    const schemas = body.components.schemas;
+
+    for (const schema of ['EntryResponse', 'CreateEntryDto', 'UpdateEntryDto']) {
+      expect(schemas[schema].properties.value.type).toBe('string');
+      expect(schemas[schema].properties.value.maxLength).toBe(ENTRY_VALUE_MAX_LENGTH);
+    }
+    expect(ENTRY_VALUE_MAX_LENGTH).toBe(65_536);
   });
 
   it('documents the entry env_dependent field as a required boolean response and optional request', async () => {
