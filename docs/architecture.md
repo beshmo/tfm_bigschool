@@ -148,3 +148,35 @@ The admin frontend reads:
 | Dev/prod parity     | Docker Compose and Kubernetes keep boundaries explicit.                       |
 | Logs                | Logs are emitted to stdout and stderr.                                        |
 | Admin processes     | Administrative tasks should run as explicit one-off commands when introduced. |
+
+## Package Manifest Checklist
+
+Use this when creating or recreating a workspace package or app.
+
+- **Versions**: `pnpm-lock.yaml` is the source of truth for exact dependency
+  versions; `package.json` files carry caret ranges and internal dependencies use
+  `workspace:*`. CI and Docker install with `--frozen-lockfile`.
+- **Workspace**: `pnpm-workspace.yaml` includes `apps/*` and `packages/*`. The
+  root `tsconfig.json` is a solution file with `references` to every package and
+  app; `tsconfig.base.json` sets `strict`, `ES2022`, `ESNext`/`Bundler`
+  modules and `isolatedModules`.
+- **ESM packages** (`shared`, `domain`, `application`, `yaml`, `okvns-wrapper`):
+  `"private": true`, `"type": "module"`, `main`/`types` at `./dist`, and an
+  `exports["."]` map with `types`, `import` **and `require`** all pointing at
+  `./dist/index.js`. The `require` condition is what lets the CommonJS API load
+  them through Node 22's `require(ESM)`; never remove it.
+- **Scripts** every package exposes: `build` (`tsc -p tsconfig.json`),
+  `typecheck` (`tsc --noEmit`), `lint` (`eslint src`), `test` (`vitest run`),
+  `test:coverage` (`vitest run --coverage`). The root delegates with `pnpm -r`.
+- **`apps/api`** is CommonJS: `tsconfig.json` uses `module: CommonJS`,
+  `moduleResolution: Node`, `experimentalDecorators` and `emitDecoratorMetadata`,
+  and a separate `tsconfig.build.json` for the build. Tests use Vitest with
+  `unplugin-swc` and `test/setup.ts`, which imports `reflect-metadata` and
+  defaults `OKVNS_STORAGE_DRIVER` to `memory`.
+- **Coverage**: `domain`, `application` and `yaml` use `@vitest/coverage-v8`
+  with 100% thresholds for lines, functions, branches and statements in their
+  `vitest.config.ts`, excluding `*.test.ts`, `index.ts` and `src/testing/**`.
+- **`apps/admin-web`** tests run in jsdom with `src/test/setup.ts` importing
+  `@testing-library/jest-dom/vitest`; `build:e2e` builds with `--mode e2e`.
+- **Git hooks**: Husky runs `lint-staged` (Prettier for `json/css/md`, Prettier
+  and ESLint for `js/jsx/ts/tsx`) on commit.
