@@ -83,6 +83,23 @@ describe('ImportYamlUseCase', () => {
     expect(await repository.existsByName('users')).toBe(false);
   });
 
+  it('GIVEN an existing namespace with a description WHEN imported without one THEN it is cleared', async () => {
+    await repository.create(Namespace.create('users', 'old description'));
+    await new ImportYamlUseCase(repository).execute(`namespaces:
+  - name: users
+    entries: []`);
+    expect((await repository.findByName('users'))?.description).toBeUndefined();
+  });
+
+  it('GIVEN an existing namespace with a description WHEN imported with another THEN it is replaced', async () => {
+    await repository.create(Namespace.create('users', 'old description'));
+    await new ImportYamlUseCase(repository).execute(`namespaces:
+  - name: users
+    description: new description
+    entries: []`);
+    expect((await repository.findByName('users'))?.description).toBe('new description');
+  });
+
   it('GIVEN YAML with an invalid description WHEN imported THEN storage is untouched', async () => {
     const yaml = `namespaces:
   - name: users
