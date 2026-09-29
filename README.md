@@ -62,6 +62,7 @@ Tools required to build, test, and run this stack locally:
 - **pnpm 11** — pinned to `11.9.0` via `packageManager` (`package.json`) and used by CI; enable through Corepack.
 - **Docker and Docker Compose v2** — runs the durable MySQL backend locally, the full stack (`docker compose up`), and the API/admin container images. Not needed only if you exclusively use the non-durable `OKVNS_STORAGE_DRIVER=memory` profile and never build images.
 - **Git** — required for cloning and for the Husky pre-commit hook that `pnpm install` sets up automatically (`prepare` script, runs `lint-staged`).
+- **OpenSpec CLI** — only needed if you add or change capabilities (see [OpenSpec Workflow](#openspec-workflow)). Not required to build, test, or run the stack.
 
 Enable Corepack and pin the exact pnpm version:
 
@@ -76,6 +77,92 @@ Playwright E2E tests additionally need browser binaries (see [Common Commands](#
 pnpm test:e2e:install            # installs the Chromium browser
 pnpm test:e2e:install --with-deps  # on Linux, also installs OS-level browser deps (matches CI)
 ```
+
+### Installing the prerequisites on Ubuntu (including WSL2)
+
+The steps below target Ubuntu running under WSL2 on Windows. They also apply to native Ubuntu, except for the Docker section (see the note there).
+
+#### 1. Git and basic tools
+
+```bash
+sudo apt update && sudo apt install -y git curl ca-certificates
+```
+
+#### 2. Node.js 22 (via nvm)
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+# restart the terminal (or `source ~/.bashrc`), then:
+nvm install 22
+nvm use 22
+node --version   # must be >= 22.22.1
+```
+
+#### 3. pnpm (via Corepack)
+
+Corepack ships with Node. Use the commands from [Prerequisites](#prerequisites):
+
+```bash
+corepack enable
+corepack prepare pnpm@11.9.0 --activate
+pnpm --version   # 11.9.0
+```
+
+#### 4. Docker with WSL integration (WSL2)
+
+On WSL2 the recommended setup is **Docker Desktop for Windows** with WSL integration. Docker Desktop runs on the Windows side, so most of these steps happen in Windows rather than in the Ubuntu shell.
+
+1. **Check that WSL2 is your backend.** In PowerShell:
+
+   ```powershell
+   wsl -l -v
+   ```
+
+   Your Ubuntu distro must show `VERSION 2`. If it shows `1`, run `wsl --set-version <DistroName> 2`.
+
+2. **Install Docker Desktop for Windows** from <https://www.docker.com/products/docker-desktop/>. Keep **Use WSL 2 instead of Hyper-V** checked in the installer and restart if prompted.
+
+3. **Enable WSL integration.** Open Docker Desktop, then go to **Settings**:
+   - **General**: confirm **Use the WSL 2 based engine** is ticked.
+   - **Resources → WSL Integration**: turn on **Enable integration with my default WSL distro** and toggle on your Ubuntu distro.
+   - Click **Apply & Restart**.
+
+4. **Verify from a new Ubuntu terminal** (existing terminals may not pick up the change):
+
+   ```bash
+   docker --version
+   docker compose version   # must be Compose v2
+   docker run --rm hello-world
+   ```
+
+Troubleshooting:
+
+- **`docker: command not found` in Ubuntu**: Docker Desktop must be running and the integration toggle for your distro must be on. Try `wsl --shutdown` from PowerShell and reopen Ubuntu.
+- **Permission denied on `/var/run/docker.sock`**: run `sudo usermod -aG docker $USER` and reopen the terminal.
+- **Two Docker daemons**: do not run a Docker Engine installed inside Ubuntu alongside Docker Desktop. Use one or the other.
+- **Slow installs and builds**: keep the repository inside the Linux filesystem (for example `~/tfm_bigschool`), not under `/mnt/c/...`.
+
+> **Native Ubuntu (no WSL):** skip Docker Desktop and install Docker Engine plus the Compose v2 plugin (`docker-ce`, `docker-compose-plugin`) following <https://docs.docker.com/engine/install/ubuntu/>.
+
+Once `docker compose version` works, `docker compose up -d mysql` from the repository root starts the local database (see [Local Development](#local-development)).
+
+#### 5. Playwright browser dependencies (E2E only)
+
+```bash
+pnpm install
+pnpm test:e2e:install --with-deps   # uses sudo/apt to install the OS libraries Chromium needs
+```
+
+#### 6. OpenSpec CLI (only for spec-driven changes)
+
+The repository is already initialized for OpenSpec (`openspec/` and the `/opsx:*` commands under `.claude/`), so you only need the CLI itself. Install it globally with npm (available once Node is installed):
+
+```bash
+npm install -g @fission-ai/openspec@latest
+openspec --version
+```
+
+You do **not** need to run `openspec init` again. See [OpenSpec Workflow](#openspec-workflow) for how it is used.
 
 ## Local Development
 
@@ -170,6 +257,8 @@ When `OKVNS_STORAGE_DRIVER=mysql` (the default), missing `OKVNS_MYSQL_HOST`,
 a clear configuration error.
 
 ## OpenSpec Workflow
+
+Install the OpenSpec CLI first if you have not (see [step 6 of the Ubuntu setup](#6-openspec-cli-only-for-spec-driven-changes)).
 
 Main specs live under `openspec/specs/`.
 
